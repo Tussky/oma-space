@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "io.github.teapot.oma-space",
+	"name": "oma-space",
+	"version": "0.0.1",
+	"author": "teapot",
+	"license": "MIT",
+	"description": "Arrange a Hyprland workspace the way you like it, capture it, and rebuild it on demand — with a bar widget and side panel to see every workspace at a glance.",
+	"kinds": [
+		"bar-widget",
+		"panel",
+		"service"
+	],
+	"entryPoints": {
+		"barWidget": "BarWidget.qml",
+		"panel": "Panel.qml",
+		"service": "Service.qml"
+	},
+	"barWidget": {
+		"displayName": "Workspace management",
+		"category": "Workspace",
+		"allowMultiple": false,
+		"defaultSection": "left"
+	}
+}
