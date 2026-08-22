@@ -39,13 +39,15 @@ Not thumbnails in v1. Live previews require per-client screencopy on Wayland, wh
 
 ### F2 · Workspace definitions
 
-A named, saved description of a working context. Stored as JSON (see Data model). A definition holds:
+A named, saved description of a working context. A definition holds:
 
 - a name and an icon
 - a layout
 - a list of apps, each with an exec line, a **working directory**, and optional floating/size hints
 
 The working directory is not a detail — it's what turns "a coding workspace" into "the coding workspace _for this project_", which is the thing worth a keybind.
+
+JSON on disk, a `Workspace` class in memory. Never executable `.js` — see constraint 2.
 
 ### F3 · Capture — save the current workspace
 
@@ -54,6 +56,20 @@ One action: **save what I have right now as a definition.**
 This is the feature that makes the product stick, and it was missing from v0.1. Nobody wants to hand-author a config file describing apps they already have open. Capture reads the live state and writes the definition for them.
 
 It's also the onboarding story (see F7) and the opening beat of the demo.
+
+**What capture reads.** None of these are hand-authored:
+
+| field | source |
+|---|---|
+| `layout` | `workspaces -j` → `tiledLayout` — per-workspace, not the global `general:layout` |
+| `matchClass` | `clients -j` → `initialClass` — the class at map time, which is what the `openwindow` event carries |
+| `cwd` | the client's `pid`, via `/proc/<pid>/cwd` |
+| `floating`, `fullscreen` | `clients -j` — separate states; a fullscreen window is not merely a large one |
+| `size` | client `size` ÷ usable area, stored as 0–1 fractions |
+
+**Sizes are fractions, never pixels.** Client sizes are logical pixels, so a definition captured on a 1920×1080 display at scale 1.6 would restore wrong anywhere else. Usable area is the logical monitor size minus `reserved` (the bar). Hyprland exposes no split-ratio readback, so a derived fraction is the only available signal for how the user sized a tiled window — and it is real intent worth keeping: a code window deliberately larger than the chat window beside it.
+
+Restore applies size best-effort per layout: exact for floating, `splitratio` for dwindle, column width for scrolling.
 
 ### F4 · Restore — rebuild a definition
 
@@ -66,6 +82,12 @@ Each definition names a layout, applied on open. Valid values: `dwindle`, `maste
 ### F6 · Entry points
 
 A keybind and an Omarchy menu entry to pick a workspace. A bar widget showing the active workspace and opening the panel.
+
+**A definition hooks onto an Omarchy workspace; it does not create a new one.** Omarchy already has ten workspaces, reachable with `Super+1`…`Super+0`. Every oma-space definition maps onto one of those ten. Those binds already exist and belong to Omarchy — oma-space does not own, generate, or rewrite them.
+
+The `shortcut` field on a definition is therefore a **reference** to the Omarchy bind that reaches this workspace, held so the panel and menu can show the user how to get there. It is descriptive, not authoritative.
+
+This gives every workspace two entry points, and they are complementary rather than redundant: the Omarchy bind reaches it **by position** (`Super+1`), and the oma-space menu reaches the same workspace **by name** ("Coding"). Positional access is faster once memorised; access by name is what makes a saved context discoverable in the first place.
 
 ### F7 · First-run: capture, not presets
 
@@ -93,7 +115,7 @@ The rules also cannot work for an **already-running** app: a new window spawned 
 
 More code, but it works for every app including already-running ones.
 
-### 5 · Plugins run unsandboxed in the shell process
+### 2 · Plugins run unsandboxed in the shell process
 
 QML runs in the same long-lived process as the bar, notifications and the **lock screen**. An uncaught throw is not a cosmetic bug. All parsing and process handling stays in the helper script; QML only renders.
 
@@ -116,23 +138,32 @@ Undefined lifecycle behaviour is the main reason tools in this category get unin
 
 ## Architecture
 
-Two pieces. The shell script does all real work; QML only draws.
+Three layers. The helper script does all real work; QML only draws; a shared model describes what a definition is. Files below are the current instances of each layer, not a fixed manifest — adding a surface or a model file doesn't change the architecture.
 
 ```
 oma-space/
 ├── manifest.json          kinds: ["bar-widget", "panel", "service"]
-├── BarWidget.qml          trigger + active-workspace indicator
-├── Panel.qml              the side preview
-├── Service.qml            holds state, subscribes to Hyprland events
-└── oma-space              the helper script
-                             oma-space capture <name>
-                             oma-space restore <name>
-                             oma-space list --json
+│
+├── *.qml                  render layer — one file per surface
+│                            BarWidget.qml   trigger + active-workspace indicator
+│                            Panel.qml       the side preview
+│                            Service.qml     state, subscribes to Hyprland events
+│
+├── *.js                   model layer — schema, defaults, validation, JSON I/O
+│                            workspace.js    a workspace definition
+│
+└── oma-space              helper layer — one executable, subcommand per verb
+                             capture <name>
+                             restore <name>
+                             list --json
 ```
+
+Definitions live outside the plugin, one JSON file per definition, so they survive reinstalling it.
 
 Capture and restore are testable from a terminal before any QML exists, which de-risks the hard half first and keeps a parsing bug out of the process that owns the lock screen.
 
-This also lands Oma-space in `panel` and `service` — two of the least-used plugin kinds in the Omarchy registry (54 and 198 of 872), which is free positioning against a crowded `bar-widget` field
+This also lands Oma-space in `panel` and `service` — two of the least-used plugin kinds in the Omarchy registry (54 and 198 of 872), which is free positioning against a crowded `bar-widget` field.
+
 ---
 
 ## Success criteria

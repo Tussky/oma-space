@@ -22,4 +22,7 @@ anything substantive in this repo.
   - **integrate** — wire it into the rest of the system
   - **implement** — write the thing
   - **suggest** — propose options; don't apply them yet
+  - **generalize** — the file holds one specific instance written by hand (hardcoded
+    example values, one concrete case). Rework it so every instance is expressible:
+    neutral defaults, parameterised fields, no example baked into the structure.
 - If the verb is unclear, ask which one is meant.
