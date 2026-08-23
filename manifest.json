@@ -18,8 +18,29 @@
 	},
 	"barWidget": {
 		"displayName": "Workspace management",
+		"description": "The active workspace on the bar; hover it to see what is open there.",
 		"category": "Workspace",
 		"allowMultiple": false,
-		"defaultSection": "left"
+		"defaultSection": "left",
+		"defaults": {
+			"icon": "",
+			"number": true
+		},
+		"schema": [
+			{
+				"key": "icon",
+				"type": "string",
+				"label": "Widget glyph",
+				"defaultValue": "",
+				"description": "The character drawn on the bar. Empty uses the built-in workspace glyph."
+			},
+			{
+				"key": "number",
+				"type": "boolean",
+				"label": "Show the workspace number",
+				"defaultValue": true,
+				"description": "The number beside the glyph, so the bar says which of the ten you are on. Workspace 10 reads as 0, matching its Super+0 bind."
+			}
+		]
 	}
 }

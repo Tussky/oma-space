@@ -1,0 +1,42 @@
+#!/usr/bin/python3
+"""oma-space — the helper layer's one executable, a subcommand per verb.
+
+Resolves the helper modules relative to its own path, so the plugin stays a
+directory you can copy (prd.md Architecture).
+
+  capture <index>   live state -> a definition, on stdout
+  live              every workspace and the windows in it, on stdout
+"""
+
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+USAGE = """usage: oma-space <verb> [args]
+
+  capture <workspace-index>   the workspace as a definition, JSON on stdout
+  live                        every workspace and its windows, JSON on stdout
+"""
+
+
+def main(argv):
+    verb = argv[1] if len(argv) > 1 else ""
+    rest = argv[2:]
+    # Imported per verb: a verb that fails to import should not take the others
+    # down with it.
+    if verb == "capture":
+        import capture
+
+        return capture.main(["oma-space capture", *rest])
+    if verb == "live":
+        import live
+
+        return live.main(["oma-space live", *rest])
+
+    print(USAGE, file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
