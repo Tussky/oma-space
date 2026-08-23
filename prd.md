@@ -1,13 +1,13 @@
-# OmaZoom — Product Requirement Document
+# Oma-space — Product Requirement Document
 
 **v0.2** · 22 Aug 2026 · revised after technical audit
 
 ---
 
-## Why OmaZoom? Two reasons
+## Why Oma-space? Two reasons
 
-1. OmaZoom was created to compete in the Omarchy plugins competition.
-2. OmaZoom is a handy idea originally inspired by GNOME's own window management. Hyprland is an amazing product that sorts and visualises an individual workspace, but neither it nor Omarchy brings cohesive organisation to _workspaces_ (with an s).
+1. Oma-space was created to compete in the Omarchy plugins competition.
+2. Oma-space is a handy idea originally inspired by GNOME's own window management. Hyprland is an amazing product that sorts and visualises an individual workspace, but neither it nor Omarchy brings cohesive organisation to _workspaces_ (with an s).
 
 ## The one-sentence version
 
@@ -19,15 +19,14 @@ Everything below serves that sentence. If a feature doesn't, it's deferred.
 
 ## Core principle: the workspace is the unit, not the app
 
-v0.1 described three different products at once — app-driven routing ("open Chrome and go to the Chrome workspace"), lazy workspace creation, and batch launching. They conflict. The unanswered question was: _I'm in the Coding workspace and I press the Chrome shortcut — what happens?_
-
-**OmaZoom is workspace-driven.** You choose a context; the machine assembles around you. You are never moved somewhere involuntarily.
+**Oma-space is workspace-driven.** You choose a context; the machine assembles around you. You are never moved somewhere involuntarily.
 
 - **Workspace-driven (this product):** you pick "Coding" → the workspace opens, the layout applies, the apps come to you.
 - **App-driven (not this product):** you open an app → you get pulled to wherever that app lives, losing the thing you were doing.
 
-App-driven routing is deferred, not deleted — see below. It's also already solved by Hyprland `windowrule`, so it was never the differentiator.
+Oma-space is not workspace-driven or app-driven, it is a tasteful combination of the two. Once the plugin is fully functional, most users will prefer to navigate by workspace shortcuts which right now are (Super+1, Super+2) but users may wish to switch these two other keybindings. If I want to go to my coding tab, I will do so.
 
+However, it is important to mention that opening a new app will redirect you to the workspace that app would usually be on. This is why it is not suggested to have the same app on multiple workspaces. If the app is on multiple different workspaces, then the using the shortcut will take you nowhere.
 ---
 
 ## Features — v1
@@ -40,13 +39,15 @@ Not thumbnails in v1. Live previews require per-client screencopy on Wayland, wh
 
 ### F2 · Workspace definitions
 
-A named, saved description of a working context. Stored as JSON (see Data model). A definition holds:
+A named, saved description of a working context. A definition holds:
 
 - a name and an icon
 - a layout
 - a list of apps, each with an exec line, a **working directory**, and optional floating/size hints
 
 The working directory is not a detail — it's what turns "a coding workspace" into "the coding workspace _for this project_", which is the thing worth a keybind.
+
+JSON on disk, a `Workspace` class in memory. Never executable `.js` — see constraint 2.
 
 ### F3 · Capture — save the current workspace
 
@@ -56,15 +57,23 @@ This is the feature that makes the product stick, and it was missing from v0.1. 
 
 It's also the onboarding story (see F7) and the opening beat of the demo.
 
+**What capture reads.** None of these are hand-authored:
+
+| field | source |
+|---|---|
+| `layout` | `workspaces -j` → `tiledLayout` — per-workspace, not the global `general:layout` |
+| `matchClass` | `clients -j` → `initialClass` — the class at map time, which is what the `openwindow` event carries |
+| `cwd` | the client's `pid`, via `/proc/<pid>/cwd` |
+| `floating`, `fullscreen` | `clients -j` — separate states; a fullscreen window is not merely a large one |
+| `size` | client `size` ÷ usable area, stored as 0–1 fractions |
+
+**Sizes are fractions, never pixels.** Client sizes are logical pixels, so a definition captured on a 1920×1080 display at scale 1.6 would restore wrong anywhere else. Usable area is the logical monitor size minus `reserved` (the bar). Hyprland exposes no split-ratio readback, so a derived fraction is the only available signal for how the user sized a tiled window — and it is real intent worth keeping: a code window deliberately larger than the chat window beside it.
+
+Restore applies size best-effort per layout: exact for floating, `splitratio` for dwindle, column width for scrolling.
+
 ### F4 · Restore — rebuild a definition
 
 Open a definition: create/switch to the workspace, apply the layout, launch every app into it with the right working directory.
-
-Three requirements the v0.1 wording missed:
-
-- **Reliability.** Must not use Hyprland `exec` workspace rules — they silently fail for Chromium-family apps and for anything already running. See Technical constraints.
-- **Idempotency.** Re-opening an already-populated workspace must not spawn a second copy of everything. Check what's running first.
-- **Stagger.** A short delay between launches so tiling settles before the next window lands.
 
 ### F5 · Per-workspace layout
 
@@ -74,17 +83,15 @@ Each definition names a layout, applied on open. Valid values: `dwindle`, `maste
 
 A keybind and an Omarchy menu entry to pick a workspace. A bar widget showing the active workspace and opening the panel.
 
+**A definition hooks onto an Omarchy workspace; it does not create a new one.** Omarchy already has ten workspaces, reachable with `Super+1`…`Super+0`. Every oma-space definition maps onto one of those ten. Those binds already exist and belong to Omarchy — oma-space does not own, generate, or rewrite them.
+
+The `shortcut` field on a definition is therefore a **reference** to the Omarchy bind that reaches this workspace, held so the panel and menu can show the user how to get there. It is descriptive, not authoritative.
+
+This gives every workspace two entry points, and they are complementary rather than redundant: the Omarchy bind reaches it **by position** (`Super+1`), and the oma-space menu reaches the same workspace **by name** ("Coding"). Positional access is faster once memorised; access by name is what makes a saved context discoverable in the first place.
+
 ### F7 · First-run: capture, not presets
 
 **On first run, offer to save the user's current setup as a workspace.** It's personalised, it's instantly correct, and it teaches the core mechanic in a single action. Ship at most one illustrative preset (Coding), not four speculative ones.
-
----
-
-## Explicitly out of scope
-
-**Tabs.** v0.1 described previewing "the tabs open" and recovering "where a tab or session" was. Hyprland exposes _windows_, not their contents — a browser window with forty tabs is one entry with one title. Reading real tab data requires a browser extension talking to the plugin over a local socket: a separate product, per-browser, with its own install and permissions story.
-
-The user need behind that wording is real and F1 + F3 address most of it. But the PRD must not promise tabs.
 
 ---
 
@@ -108,32 +115,11 @@ The rules also cannot work for an **already-running** app: a new window spawned 
 
 More code, but it works for every app including already-running ones.
 
-### 5 · Plugins run unsandboxed in the shell process
+### 2 · Plugins run unsandboxed in the shell process
 
 QML runs in the same long-lived process as the bar, notifications and the **lock screen**. An uncaught throw is not a cosmetic bug. All parsing and process handling stays in the helper script; QML only renders.
 
 ---
-
-## Data model
-
-```json
-{
-  "version": 1,
-  "workspaces": [
-    {
-      "name": "Coding",
-      "icon": "󰅩",
-      "layout": "dwindle",
-      "apps": [
-        { "exec": "alacritty -e nvim", "cwd": "~/Projects/omazoom" },
-        { "exec": "alacritty",         "cwd": "~/Projects/omazoom" },
-        { "exec": "chromium",          "cwd": "~" }
-      ]
-    }
-  ]
-}
-```
-
 ---
 
 ## Lifecycle — decisions that must not stay open
@@ -152,32 +138,31 @@ Undefined lifecycle behaviour is the main reason tools in this category get unin
 
 ## Architecture
 
-Two pieces. The shell script does all real work; QML only draws.
+Three layers. The helper script does all real work; QML only draws; a shared model describes what a definition is. Files below are the current instances of each layer, not a fixed manifest — adding a surface or a model file doesn't change the architecture.
 
 ```
-omazoom/
+oma-space/
 ├── manifest.json          kinds: ["bar-widget", "panel", "service"]
-├── BarWidget.qml          trigger + active-workspace indicator
-├── Panel.qml              the side preview
-├── Service.qml            holds state, subscribes to Hyprland events
-└── omazoom                the helper script
-                             omazoom capture <name>
-                             omazoom restore <name>
-                             omazoom list --json
+│
+├── *.qml                  render layer — one file per surface
+│                            BarWidget.qml   trigger + active-workspace indicator
+│                            Panel.qml       the side preview
+│                            Service.qml     state, subscribes to Hyprland events
+│
+├── *.js                   model layer — schema, defaults, validation, JSON I/O
+│                            workspace.js    a workspace definition
+│
+└── oma-space              helper layer — one executable, subcommand per verb
+                             capture <name>
+                             restore <name>
+                             list --json
 ```
+
+Definitions live outside the plugin, one JSON file per definition, so they survive reinstalling it.
 
 Capture and restore are testable from a terminal before any QML exists, which de-risks the hard half first and keeps a parsing bug out of the process that owns the lock screen.
 
-This also lands OmaZoom in `panel` and `service` — two of the least-used plugin kinds in the Omarchy registry (54 and 198 of 872), which is free positioning against a crowded `bar-widget` field.
-
-## Build order
-
-1. `omazoom capture` — pure shell, testable immediately.
-2. `omazoom restore` with spawn-then-claim. **Test against Chrome first** — it's the hard case, and if Chrome works everything works.
-3. Bar widget + keybind — smallest possible UI over a working CLI.
-4. The side preview panel — built last, on top of something that already functions.
-
-Building the panel first is the tempting mistake: it looks like progress, works fine standalone, and teaches nothing about whether the hard half is achievable.
+This also lands Oma-space in `panel` and `service` — two of the least-used plugin kinds in the Omarchy registry (54 and 198 of 872), which is free positioning against a crowded `bar-widget` field.
 
 ---
 
