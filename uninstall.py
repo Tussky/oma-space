@@ -33,6 +33,7 @@ USAGE = """usage: oma-space uninstall [options]
   --no-omarchy   leave omarchy.workspaces off the bar as well
   --purge        also delete the installed plugin directory
   --dry-run      print what would be written and change nothing
+  --yes, -y      do not ask; for scripts and unattended removals
 
 Definitions in ~/.config/oma-space/workspaces are never touched.
 """
@@ -112,7 +113,7 @@ def purge(source, target, dry_run=False):
 
 def parse(argv):
     """(options, errors). Hand-rolled to match the other verbs."""
-    options = {"omarchy": True, "purge": False, "dry_run": False}
+    options = {"omarchy": True, "purge": False, "dry_run": False, "yes": False}
     errors = []
     for arg in argv[1:]:
         if arg == "--no-omarchy":
@@ -121,6 +122,8 @@ def parse(argv):
             options["purge"] = True
         elif arg == "--dry-run":
             options["dry_run"] = True
+        elif arg in ("--yes", "-y"):
+            options["yes"] = True
         else:
             errors.append(f"unknown option {arg!r}")
     return options, errors
@@ -157,24 +160,17 @@ def main(argv):
 
     layout, notes = restore_layout(layout, pid, options["omarchy"])
     bar["layout"] = layout
+
+    target = os.path.join(install.plugins_dir(), pid)
+    if options["purge"]:
+        _, purge_note, error = purge(source, target, dry_run=True)
+        if error:
+            fail(error)
+            return 1
+        notes.append(purge_note.replace("would delete", "delete"))
+
     for note in notes:
         print(f"uninstall: {note}", file=sys.stderr)
-
-    if not options["dry_run"]:
-        error = install.write_config(path, config)
-        if error:
-            fail(error)
-            return 1
-        print(f"uninstall: wrote {path}", file=sys.stderr)
-
-    if options["purge"]:
-        target = os.path.join(install.plugins_dir(), pid)
-        _, note, error = purge(source, target, options["dry_run"])
-        if error:
-            fail(error)
-            return 1
-        print(f"uninstall: {note}", file=sys.stderr)
-
     print(
         f"uninstall: your definitions are untouched in {store.workspaces_dir()}",
         file=sys.stderr,
@@ -182,6 +178,23 @@ def main(argv):
 
     if options["dry_run"]:
         return 0
+
+    if not install.confirm("Put your bar back?", options["yes"], "uninstall"):
+        fail("aborted; nothing was changed")
+        return 1
+
+    error = install.write_config(path, config)
+    if error:
+        fail(error)
+        return 1
+    print(f"uninstall: wrote {path}", file=sys.stderr)
+
+    if options["purge"]:
+        _, note, error = purge(source, target)
+        if error:
+            fail(error)
+            return 1
+        print(f"uninstall: {note}", file=sys.stderr)
     if not install.reload_shell():
         print(
             "uninstall: could not reach the shell — run `omarchy restart shell`",

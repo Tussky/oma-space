@@ -163,6 +163,10 @@ They are the archetypes people actually name workspaces after, not a palette: th
 
 **Install is a verb, because Omarchy has no hook for one.** `omarchy plugin add` clones a directory and stops; nothing runs afterwards, so a plugin cannot place itself. `oma-space install` is that step made explicit: it puts the directory in `~/.config/omarchy/plugins/`, takes `omarchy.workspaces` out of the bar layout, and stands the tabs at its exact position in its section, so nothing else on the bar moves. Idempotent, backed up, and atomic — it is rewriting the user's whole bar, and the failure mode of getting that wrong is a shell with no bar at all. Interface: `docs/install.md`.
 
+**And it asks first.** Install and uninstall are the only things in oma-space that write to configuration the user did not create for it, so they are the only things that stop and ask: the whole plan is printed — what leaves the bar, what goes on, where the old bar is kept — and then a plain `[y/N]`. Anything but yes exits having written nothing at all, the plugin directory included, which is why the plan is computed before a single file is touched. A run with no terminal refuses rather than assuming, and `--yes` is the way to say it in a script.
+
+Not `gum confirm`, which is what Omarchy's own scripts use, because the helper is stdlib-only and has to behave the same on a machine where nothing else is installed.
+
 It also replaces a development symlink with a real directory. That is not tidiness: the shell's own validator refuses a plugin folder containing symlinks, and the watcher behind live reload is `inotifywait -r`, which does not follow one — so a symlinked checkout is both unpublishable and unreloadable.
 
 The two surfaces are split by what a hover card *can* be, not by taste. A hover card is a passive overlay with no focus grab — pointer events reach it, keystrokes never do — so a name could not be typed into one. The panel takes keyboard focus, which is also why it cannot be the thing that opens on hover: a glance that steals focus from what you were typing is worse than no glance. Hover keeps the glance, a button gets the keyboard.

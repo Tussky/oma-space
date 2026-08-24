@@ -39,6 +39,11 @@ omarchy restart shell
 takes over the bar. It removes `omarchy.workspaces` from your layout and stands nine
 numbered tabs and a scratch tab exactly where it stood, so nothing else on the bar moves.
 
+**It shows you the whole plan and asks before changing anything** — what leaves the bar,
+what goes on it, and where your old bar is kept. Answer anything but `y` and nothing is
+written: not your config, not the plugin directory. `--yes` skips the question for scripts,
+and a run with no terminal refuses rather than assuming.
+
 Your `shell.json` is copied to `shell.json.bak` first — once, and never overwritten
 afterwards, so the backup stays the bar as it was before oma-space ever touched it. On a
 machine that has never customised the bar, install starts from the defaults Omarchy ships.
@@ -56,7 +61,10 @@ Full options: [`docs/install.md`](docs/install.md).
 ```bash
 oma-space uninstall             # tabs off, omarchy.workspaces back where it was
 oma-space uninstall --purge     # and delete the installed plugin directory
+oma-space uninstall --yes       # unattended
 ```
+
+It asks first, exactly as install does, and shows what it will put back before it does.
 
 **Use this rather than `omarchy plugin remove` on its own.** Omarchy's remove drops a
 single bar entry per plugin id, so a strip of ten tabs would leave nine dead slots behind —

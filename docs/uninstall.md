@@ -12,6 +12,9 @@ navigation at all.
 ## Contract
 
 - Diagnostics to **stderr**. Exit `0`, `1` on failure, `2` on usage.
+- **Nothing is changed before you agree to it**, on the same terms as install: the
+  plan first, then the question, and `1` with nothing written if the answer is no.
+  A run with no terminal and no `--yes` refuses rather than assuming.
 - **Every tab comes off**, in every section, however many there are.
 - **`omarchy.workspaces` goes back where the strip stood** — the position matters:
   appending it to the end of the section would leave the bar rearranged by a plugin
@@ -34,7 +37,8 @@ oma-space uninstall --dry-run        # say what would change, change nothing
 |---|---|
 | `--no-omarchy` | leave `omarchy.workspaces` off the bar as well — for a bar that never had it |
 | `--purge` | also delete `~/.config/omarchy/plugins/<id>/` |
-| `--dry-run` | print what would change and write nothing |
+| `--dry-run` | print what would change and write nothing. Never prompts |
+| `--yes`, `-y` | do not ask. For scripts and unattended removals |
 
 ## In Python
 

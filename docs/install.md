@@ -11,6 +11,12 @@ plugin directory changes.
 
 - The installed plugin directory on **stdout**, once. Nothing else on stdout, ever.
 - Diagnostics to **stderr**. Exit `0`, `1` on failure, `2` on usage.
+- **Nothing is changed before you agree to it.** The whole plan — the directory it
+  would install, what leaves the bar, what goes on it, where the backup lands — is
+  printed first, and then it asks. Answering anything but `y` exits `1` having
+  written nothing: not the config, not the plugin directory.
+- **Without a terminal it refuses rather than assumes.** A piped or scripted run
+  with no `--yes` prints the plan, says it will not proceed unattended, and stops.
 - **shell.json is never written without a backup** beside it at `shell.json.bak`. It is
   written once and then left alone: what is worth keeping is the bar as it stood before
   oma-space first touched it, which a second run would otherwise overwrite with install's
@@ -32,6 +38,7 @@ oma-space install                    # nine tabs and the scratch tab, where omar
 oma-space install --dry-run          # the layout it would write, on stdout
 oma-space install --tabs 5           # workspaces 1-5 only
 oma-space install --layout-only      # rewrite the bar; leave the directory alone
+oma-space install --yes              # unattended
 ```
 
 ## Options
@@ -43,7 +50,8 @@ oma-space install --layout-only      # rewrite the bar; leave the directory alon
 | `--section S` | `left`, `center` or `right`. Default: wherever `omarchy.workspaces` was, else `left` |
 | `--keep-omarchy` | leave `omarchy.workspaces` on the bar beside the tabs |
 | `--layout-only` | rewrite the bar layout only, for a checkout you are still editing in place |
-| `--dry-run` | print the layout that would be written and change nothing |
+| `--dry-run` | print the layout that would be written and change nothing. Never prompts, because it changes nothing |
+| `--yes`, `-y` | do not ask. For scripts, images and unattended installs |
 
 ## After it runs
 

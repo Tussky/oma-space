@@ -46,11 +46,36 @@ USAGE = """usage: oma-space install [options]
   --keep-omarchy  leave omarchy.workspaces on the bar beside the tabs
   --layout-only   rewrite the bar layout; do not install the directory
   --dry-run       print what would be written and change nothing
+  --yes, -y       do not ask; for scripts and unattended installs
 """
 
 
 def fail(msg):
     print(f"install: {msg}", file=sys.stderr)
+
+
+def confirm(question, assume_yes=False, verb="install"):
+    """True when the user said so.
+
+    Not a `gum confirm` like Omarchy's own scripts: the helper is stdlib-only and
+    has to answer the same way on a machine where nothing else is installed. The
+    prompt goes to stderr because stdout carries the result and nothing else."""
+    if assume_yes:
+        return True
+    if not (sys.stdin.isatty() and sys.stderr.isatty()):
+        print(
+            f"{verb}: refusing to change your configuration without confirmation; "
+            "pass --yes",
+            file=sys.stderr,
+        )
+        return False
+    print(f"{question} [y/N] ", end="", file=sys.stderr, flush=True)
+    try:
+        answer = input()
+    except (EOFError, KeyboardInterrupt):
+        print(file=sys.stderr)
+        return False
+    return answer.strip().lower() in ("y", "yes")
 
 
 def config_home():
@@ -274,6 +299,7 @@ def parse(argv):
         "keep_omarchy": False,
         "layout_only": False,
         "dry_run": False,
+        "yes": False,
     }
     errors = []
     args = iter(argv[1:])
@@ -286,6 +312,8 @@ def parse(argv):
             options["layout_only"] = True
         elif arg == "--dry-run":
             options["dry_run"] = True
+        elif arg in ("--yes", "-y"):
+            options["yes"] = True
         elif arg in ("--tabs", "--section"):
             value = next(args, None)
             if value is None:
@@ -325,23 +353,22 @@ def main(argv):
         fail(error or "manifest.json has no id")
         return 1
 
-    # Read the bar before touching the filesystem: a config this cannot parse
-    # should not leave a half-installed plugin directory behind.
+    # Everything is worked out before anything is touched: the plan is what the
+    # user is being asked to agree to, so it cannot be half-done by the time
+    # they see it.
     path = shell_config_path()
     config, seeded, error = read_config(path)
     if error:
         fail(error)
         return 1
-    if seeded:
-        print(f"install: no config of your own yet; starting from {seeded}", file=sys.stderr)
 
     target = os.path.join(plugins_dir(), pid)
+    copy_note = None
     if not options["layout_only"]:
-        _, note, error = install_files(source, target, options["dry_run"])
+        _, copy_note, error = install_files(source, target, dry_run=True)
         if error:
             fail(error)
             return 1
-        print(f"install: {note}", file=sys.stderr)
 
     bar = config.get("bar")
     if not isinstance(bar, dict):
@@ -357,13 +384,30 @@ def main(argv):
     )
     bar["layout"] = layout
 
+    if seeded:
+        print(f"install: no config of your own yet; starting from {seeded}", file=sys.stderr)
+    if copy_note:
+        print(f"install: {copy_note.replace('would install', 'install')}", file=sys.stderr)
     for note in notes:
         print(f"install: {note}", file=sys.stderr)
+    if os.path.exists(path):
+        print(f"install: your bar is kept at {path}.bak", file=sys.stderr)
 
     if options["dry_run"]:
         json.dump(layout, sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0
+
+    if not confirm("Change your bar?", options["yes"], "install"):
+        fail("aborted; nothing was changed")
+        return 1
+
+    if not options["layout_only"]:
+        _, note, error = install_files(source, target)
+        if error:
+            fail(error)
+            return 1
+        print(f"install: {note}", file=sys.stderr)
 
     had_config = os.path.exists(path)
     error = write_config(path, config)
@@ -371,8 +415,7 @@ def main(argv):
         fail(error)
         return 1
     print(
-        f"install: wrote {path}"
-        + (f" (bar as it was: {path}.bak)" if had_config else ""),
+        f"install: wrote {path}" + (f" (bar as it was: {path}.bak)" if had_config else ""),
         file=sys.stderr,
     )
 
