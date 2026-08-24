@@ -30,7 +30,7 @@ back to its number. 5 through 10 are empty, so they are not on the bar at all.*
 ## Install
 
 ```bash
-omarchy plugin add https://github.com/Tussky/omazoom.git
+omarchy plugin add https://github.com/Tussky/oma-space.git
 ~/.config/omarchy/plugins/io.github.tussky.oma-space/oma-space install
 omarchy restart shell
 ```
@@ -176,7 +176,7 @@ addressed by index and why two definitions can never claim the same `Super+N`.
 ## Development
 
 ```bash
-git clone https://github.com/Tussky/omazoom.git oma-space
+git clone https://github.com/Tussky/oma-space.git oma-space
 cd oma-space
 ./oma-space install          # copies the tree into ~/.config/omarchy/plugins/
 omarchy restart shell        # a changed .qml needs a restart; the shell caches components
