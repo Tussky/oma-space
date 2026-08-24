@@ -219,6 +219,10 @@ Item {
   // second restore of the same workspace.
   property bool busy: false
 
+  // Which workspace the running verb concerns, so a watchdog firing reports it
+  // to the surface that asked rather than to every idle tab.
+  property int busyIndex: 0
+
   // A helper that never exits would otherwise hold `busy` for the session and
   // every surface with it. Restore is the slow one — a window has ten seconds
   // to appear, per app — so this is long enough not to cut a real one short.
@@ -232,7 +236,7 @@ Item {
       deleteProcess.running = false
       restoreProcess.running = false
       root.busy = false
-      root.actionFinished("", 0, false, "the helper stopped responding")
+      root.actionFinished("", root.busyIndex, false, "the helper stopped responding")
     }
   }
 
@@ -261,6 +265,7 @@ Item {
     if (force) argv.push("--force")
     saveProcess.pendingName = trimmed
     saveProcess.pendingIndex = index
+    busyIndex = index
     saveProcess.command = argv
     busy = true
     saveProcess.running = true
@@ -273,6 +278,7 @@ Item {
     if (busy || index <= 0 || trimmed === "") return
     editProcess.pendingName = trimmed
     editProcess.pendingIndex = index
+    busyIndex = index
     editProcess.command = ["python3", helper, "edit", String(index),
       "--name", trimmed, "--icon", String(icon || "")]
     busy = true
@@ -285,6 +291,7 @@ Item {
     if (busy || index <= 0) return
     deleteProcess.pendingName = slotName(index) || ("workspace " + index)
     deleteProcess.pendingIndex = index
+    busyIndex = index
     deleteProcess.command = ["python3", helper, "delete", String(index)]
     busy = true
     deleteProcess.running = true
@@ -296,6 +303,7 @@ Item {
     if (busy || !(index >= 1)) return
     restoreProcess.pendingName = slotName(index) || ("workspace " + index)
     restoreProcess.pendingIndex = index
+    busyIndex = index
     restoreProcess.command = ["python3", helper, "restore", String(index)]
     busy = true
     restoreProcess.running = true

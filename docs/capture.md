@@ -27,7 +27,7 @@ the process that owns the lock screen.
 ```json
 {"index":1,"name":"","icon":"","layout":"scrolling","shortcut":"Super+1","apps":[
   {"exec":"foot -e nvim","matchClass":"foot","label":"nvim",
-   "cwd":"/home/teapot/Projects/oma-space","floating":false,
+   "cwd":"/home/you/Projects/oma-space","floating":false,
    "fullscreen":false,"size":[0.47,0.96]}]}
 ```
 

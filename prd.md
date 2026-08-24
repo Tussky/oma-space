@@ -153,7 +153,7 @@ Hover rather than click because of what it costs to be wrong. "What is on that w
 
 **One tab holds no configuration at all: the scratch tab.** It is pinned to workspace 10 and refuses to be saved. It comes and goes like every other tab: an empty workspace is off the bar whether or not it is the scratch one, because a permanent slot for a workspace with nothing in it is the placeholder this strip exists to avoid. `pinned` brings it back for anyone who wants it standing there. Every other tab is somewhere you have arranged; the scratch tab is where the thing you have *not* arranged goes, so an experiment never grows a definition by accident and never has to be cleaned out of one.
 
-**Both writes live behind a button in the hover card.** The card carries `Open <name>` for a workspace that has something saved, and a button that opens the panel: a field to name what is on this workspace and save it, and the saved definitions, each one click from being rebuilt. Capture, name, open again — the demo's ninety seconds, on the bar. The panel is per tab: it captures *its* workspace, whichever one you are standing on.
+**Both writes live behind a button in the hover card.** The card carries `Open <name>` for a workspace that has something saved, and a button that opens the panel: a field to name what is on this workspace and save it, and the saved definitions, each one click from being rebuilt. Capture, name, open again — the demo's ninety seconds, on the bar. The panel opens on the workspace whose tab you came from, and edits any of the ten from there (below).
 
 **Fifteen icons, so a tab can be read without being read.** A definition carries an icon, and until now nothing could set one — the field existed and no surface wrote to it. The capture panel offers fifteen: Code, Terminal, Chat, Web, Mail, Writing, Notes, Reading, Design, Music, Video, Games, Files, System, Agents. Clicking the chosen one again takes it off, so "no icon" needs no cell of its own.
 
@@ -312,9 +312,9 @@ GPL-3.0-or-later. Copyleft rather than permissive: this is a plugin people are m
 
 The competition demo, in about ninety seconds:
 
-1. Arrange a real workspace — editor, browser, terminal. Press capture. Name it "Coding."
-2. Wipe it. Open a fresh workspace, hit the shortcut, watch it rebuild — right apps, right layout, right directories.
-3. Walk the strip: every workspace says its name and what is in it under the cursor.
+1. Arrange a real workspace — editor, browser, terminal. Right-click its tab, name it "Coding", give it the code icon. The tab stops being a number.
+2. Close everything on it. The tab leaves the bar. Press `Super+3` and watch the workspace rebuild itself — right apps, right directories, right layout — without another keystroke.
+3. Walk the strip: every tab says what is open in the workspace under the cursor, and the one you are on is the one that is lit.
 
 ---
 

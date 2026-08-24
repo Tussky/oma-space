@@ -510,7 +510,9 @@ BarWidget {
 
         Button {
           visible: root.saved
-          text: "Open " + root.title
+          // Capped: a card is not wide enough to spell out a long name twice,
+          // and the name is already above in full.
+          text: "Open " + (root.title.length > 16 ? root.title.substring(0, 15) + "…" : root.title)
           bordered: true
           fontSize: Style.font.bodySmall
           foreground: root.bar ? root.bar.foreground : Color.foreground

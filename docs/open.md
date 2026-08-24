@@ -35,7 +35,7 @@ suggests a line for `~/.config/hypr/bindings.lua` and the user adds it:
 
 ```lua
 o.bind("SUPER + R", "Rebuild this workspace (oma-space)",
-  "python3 ~/.config/omarchy/plugins/io.github.teapot.oma-space/oma-space open")
+  "python3 ~/.config/omarchy/plugins/io.github.tussky.oma-space/oma-space open")
 ```
 
 `python3` explicitly rather than the shebang, for the same reason `Service.qml`
