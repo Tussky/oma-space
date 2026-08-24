@@ -5,18 +5,33 @@ Resolves the helper modules relative to its own path, so the plugin stays a
 directory you can copy (prd.md Architecture).
 
   capture <index>   live state -> a definition, on stdout
+  save <name>       a definition -> ~/.config/oma-space/workspaces
+  edit <index>      a workspace's name and icon, in place
+  restore <index>   a workspace -> whatever is saved for it
+  open [index]      the same, defaulting to where you are
+  list              every saved definition
   live              every workspace and the windows in it, on stdout
 """
 
 import os
 import sys
 
+# The plugin directory is not a place to write to: it lives under the user's
+# config, and a __pycache__ appearing there on every bar refresh is litter.
+sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 USAGE = """usage: oma-space <verb> [args]
 
   capture <workspace-index>   the workspace as a definition, JSON on stdout
+  save <name> [--index N]     save a definition; stdin unless --index is given
+  edit <index> [--name|--icon] rename or re-icon a definition without capturing
+  restore <workspace-index>   rebuild a workspace from what is saved for it
+  open [workspace-index]      the same, defaulting to the active workspace
+  list [--json]               all ten workspaces and what is saved for them
   live                        every workspace and its windows, JSON on stdout
+  install [options]           put the tabs on the bar, replacing omarchy.workspaces
+  uninstall [options]         take them off and put omarchy.workspaces back
 """
 
 
@@ -29,10 +44,40 @@ def main(argv):
         import capture
 
         return capture.main(["oma-space capture", *rest])
+    if verb == "save":
+        import save
+
+        return save.main(["oma-space save", *rest])
+    if verb == "edit":
+        import edit
+
+        return edit.main(["oma-space edit", *rest])
+    if verb == "restore":
+        import restore
+
+        return restore.main(["oma-space restore", *rest])
+    if verb == "open":
+        # `open` shadows nothing at module scope, but the alias keeps the
+        # builtin recognisable to anyone reading this file.
+        import open as open_verb
+
+        return open_verb.main(["oma-space open", *rest])
+    if verb == "list":
+        import list as list_verb
+
+        return list_verb.main(["oma-space list", *rest])
     if verb == "live":
         import live
 
         return live.main(["oma-space live", *rest])
+    if verb == "install":
+        import install
+
+        return install.main(["oma-space install", *rest])
+    if verb == "uninstall":
+        import uninstall
+
+        return uninstall.main(["oma-space uninstall", *rest])
 
     print(USAGE, file=sys.stderr)
     return 2

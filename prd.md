@@ -1,6 +1,6 @@
 # Oma-space — Product Requirement Document
 
-**v0.2** · 22 Aug 2026 · revised after technical audit
+**v0.3** · 23 Aug 2026 · the bar widget becomes the workspace strip (F6)
 
 ---
 
@@ -33,25 +33,26 @@ However, it is important to mention that opening a new app will redirect you to 
 
 ### F1 · Workspace preview panel
 
-A side panel listing every workspace and the **windows** open in it — app icon, app name, window title.
+Every workspace and the **windows** open in it — app icon, app name, window title. One workspace's worth of that list is what a bar tab shows on hover (F6), and the tab's panel lists all ten with what each holds. A dedicated side panel is deferred: with a tab per workspace, the strip *is* the map, and the surface that was going to hold it would duplicate the panel that already exists.
 
 Not thumbnails in v1. Live previews require per-client screencopy on Wayland, which is expensive and awkward to drive from QML. An icon-and-title list is ~90% of the usefulness at ~10% of the cost, and is arguably what you want at a glance anyway. Thumbnails are a v2 spike.
 
 **Live state gets its own verb.** What is open right now is not a definition and never becomes one, so `oma-space live` reports it separately: every workspace and its windows, with no `exec`, `cwd` or `size` to mistake for something saved. It resolves a window's name and icon exactly as capture resolves its exec line, so a window reads identically in the panel and in a definition taken from it. Interface: `docs/live.md`.
 
-`list --json` is the other half and stays distinct: saved definitions, whether or not anything of theirs is running. The panel eventually shows both against each other; the live half is what F6 hovers.
+`list --json` is the other half and stays distinct: all ten workspaces and what is saved for each, whether or not anything of theirs is running. Ten entries always — an empty slot is a workspace nobody has saved yet, not a missing record, so the panel renders a map of the ten rather than a list of however many exist. The live half is what a workspace tab hovers (F6), one workspace at a time; the saved half is what its panel opens.
 
 ### F2 · Workspace definitions
 
 A named, saved description of a working context. A definition holds:
 
-- a name and an icon
+- the workspace it belongs to — one of Omarchy's ten, and its identity
+- a name and an icon, both labels — the icon from the fifteen the panel offers (F6), or any string if hand-edited
 - a layout
 - a list of apps, each with an exec line, a **working directory**, and optional floating/size hints
 
 The working directory is not a detail — it's what turns "a coding workspace" into "the coding workspace _for this project_", which is the thing worth a keybind.
 
-JSON on disk, a `Workspace` class in memory — `omaspace/workspace.py`. Never executable `.js` — see constraint 2.
+JSON on disk, a `Workspace` class in memory — `workspace.py`. Never executable `.js` — see constraint 2.
 
 ### F3 · Capture — save the current workspace
 
@@ -63,7 +64,11 @@ It's also the onboarding story (see F7) and the opening beat of the demo.
 
 **Capture only reads.** It observes the current workspace and produces a definition. It never decides where that definition goes — the user does: new file, overwrite an existing one, or discard. So capture never reads the definition already on disk and never merges into it, which means hand-edited fields are only ever lost by an overwrite the user asked for.
 
-Concretely, `oma-space capture <index>` writes JSON to stdout. Saving is a separate step. Interface: `docs/capture.md`.
+Changing a definition's *labels* is not this verb's business: `oma-space edit` renames and re-icons in place, so a name is never a reason to re-read a workspace (F6).
+
+Concretely, `oma-space capture <index>` writes JSON to stdout, and `oma-space save <name>` is the step that puts it on disk — under a filename derived from the name, refusing to overwrite an existing definition unless the user says so. The definition can be piped straight from capture or reviewed in between; both are the same command.
+
+Inside Python nothing is piped and nothing is parsed twice: `capture.workspace(index)` returns the `Workspace` that save validates and restore will read. Serialisation happens once, at the process boundary QML reads, because QML is the one caller that cannot import a module (constraint 2). Interfaces: `docs/capture.md`, `docs/save.md`.
 
 **What capture reads.** None of these are hand-authored:
 
@@ -108,17 +113,71 @@ This costs little, because a webapp is not a tab. `--app=` windows are standalon
 
 Open a definition: create/switch to the workspace, apply the layout, launch every app into it with the right working directory.
 
+`oma-space restore <name>` does this, filling gaps rather than duplicating: an app already on the workspace is left alone, and the count decides, so a definition holding two terminals against one already open launches one more. Interface: `docs/restore.md`.
+
+**Arriving on an empty workspace fills it.** You pick a context and the machine assembles around you — the core principle, made automatic. The trigger is *focus*, not the tab, so Omarchy's own `Super+N` gets the behaviour without oma-space owning the bind (F6), and so does anything else that switches workspaces.
+
+Three conditions, all of them necessary: the workspace holds no windows, it has a definition, and that definition has apps in it. A workspace with anything at all in it is left alone — arriving is not asking for gaps to be filled, and the deliberate gap-fill is still `oma-space open` and the panel's Open button. It is attempted once per arrival: a definition whose apps fail to launch leaves the workspace empty, and retrying that on every settle would be worse than not trying at all.
+
+The store is re-read on arrival rather than trusted from startup, because a definition saved from a terminal since startup is exactly the one you are about to walk into. Only the service the shell mounted does this; a tab that fell back to a service of its own would otherwise restore the same workspace once per tab.
+
+It is on by default and has no setting yet. That is a deliberate omission rather than an oversight — a workspace that fills itself is the product's sentence, and a switch for it is worth adding when someone wants it off, not before.
+
+**Tiled sizes are not restored yet.** A floating window gets its exact size back; a tiled one is placed by the layout, because Hyprland takes no absolute size for a tiled window — dwindle wants a `splitratio` against its parent node, scrolling a column width. The fraction is captured and kept, so this is a gap in restore rather than in the definition; restore says on stderr when it skipped one.
+
 ### F5 · Per-workspace layout
 
 Each definition names a layout, applied on open. Valid values: `dwindle`, `master`, `monocle`, `scrolling`.
 
-### F6 · Entry points
+Applied as a workspace rule evaluated live — `hl.workspace_rule({ workspace = "1", layout = "dwindle" })`. Omarchy's own layout toggle persists its choice into `~/.local/state/omarchy/workspace-layouts/`; oma-space does not write there. That state belongs to Omarchy exactly as its keybinds do (F6), so restore sets the layout for the session it is restoring into and leaves the file alone.
 
-A keybind and an Omarchy menu entry to pick a workspace. A bar widget showing the active workspace, and **showing what is open in it on hover** — the F1 list, for the one workspace you are on.
+### F6 · Entry points — the workspace strip
 
-Hover rather than click because of what it costs to be wrong. "What is on this workspace" is a glance, asked constantly and answered in under a second; making it a click puts a decision in front of an idle question, and a panel you have to dismiss is worse than no panel. The full panel across every workspace stays a deliberate act.
+**Oma-space takes the workspace strip over.** The bar widget is not an indicator standing beside Omarchy's workspace numbers; it *is* the numbers. Each instance is one workspace — click it to go there, hover it to see what that workspace is called and what is open in it. Ten of them make the strip, and `omarchy.workspaces` comes off the bar.
+
+Hover rather than click because of what it costs to be wrong. "What is on that workspace" is a glance, asked constantly and answered in under a second; making it a click puts a decision in front of an idle question, and a panel you have to dismiss is worse than no panel. It is also the question the strip it replaces cannot answer at all: Omarchy's numbers say which workspaces exist and which one you are on, never what is in them.
+
+**Click is navigation; the tab itself launches nothing.** It focuses the workspace, the same `hl.dsp.focus` call `omarchy.workspaces` makes. What may follow is not the click's doing: arriving on an empty workspace that has something saved fills it (F4), and that is true however you arrived — by tab, by `Super+N`, or from a script. The tab has no second gesture that writes, so the strip stays something you can use absent-mindedly.
+
+**Where you are is said twice.** Omarchy marks the focused workspace by swapping its number for a glyph, which an icon has already taken the place of — so the focused tab is drawn in the bar's accent colour and underlined. A strip whose tabs come and go has to answer "where am I" without being counted along.
+
+**One widget instance per workspace, not one widget drawing ten.** `allowMultiple` is true and each instance carries its own `index`, so the strip is assembled in the bar layout like everything else on the bar: dragged into order, spaced, split around another widget, and configured per tab in Omarchy's own settings — which tab shows a name instead of a number, which one stays put when its workspace empties. A single widget owning ten pills would own that arrangement too, and none of it would be reachable from the bar's own gestures.
+
+**Tabs come and go with the work.** A tab is on the bar while its workspace holds windows or is focused; when the last window closes and you leave, it collapses out of the strip. The rule has no exceptions — an empty workspace is not on the bar — so `pinned` is the one way to keep a tab standing, and it is per tab and off by default. The strip is therefore a picture of what is actually going on rather than ten permanent numbers — and a saved workspace that is not running is reached by its Omarchy bind or from the panel, not from a placeholder standing in for it.
+
+**One tab holds no configuration at all: the scratch tab.** It is pinned to workspace 10 and refuses to be saved. It comes and goes like every other tab: an empty workspace is off the bar whether or not it is the scratch one, because a permanent slot for a workspace with nothing in it is the placeholder this strip exists to avoid. `pinned` brings it back for anyone who wants it standing there. Every other tab is somewhere you have arranged; the scratch tab is where the thing you have *not* arranged goes, so an experiment never grows a definition by accident and never has to be cleaned out of one.
+
+**Both writes live behind a button in the hover card.** The card carries `Open <name>` for a workspace that has something saved, and a button that opens the panel: a field to name what is on this workspace and save it, and the saved definitions, each one click from being rebuilt. Capture, name, open again — the demo's ninety seconds, on the bar. The panel is per tab: it captures *its* workspace, whichever one you are standing on.
+
+**Fifteen icons, so a tab can be read without being read.** A definition carries an icon, and until now nothing could set one — the field existed and no surface wrote to it. The capture panel offers fifteen: Code, Terminal, Chat, Web, Mail, Writing, Notes, Reading, Design, Music, Video, Games, Files, System, Agents. Clicking the chosen one again takes it off, so "no icon" needs no cell of its own.
+
+**The tab wears it instead of its number.** That is the default, because a number on a bar says only where a workspace sits in a row you already know the order of, while an icon says what it is for. The number is the fallback, not the norm: a workspace with nothing saved has nothing to draw, so it shows its number until it does.
+
+They are the archetypes people actually name workspaces after, not a palette: the point is that a strip of icons is scannable at a glance where a strip of names is not, and a workspace you can recognise by shape is one you stop reading. Material Design glyphs, which every Nerd Font patch carries — and a fixed set in the render layer rather than a picker over the whole font, because a font browser is a different product. `icon` on a definition stays any string, so an editor or `save --icon` is not held to the fifteen.
+
+**Install is a verb, because Omarchy has no hook for one.** `omarchy plugin add` clones a directory and stops; nothing runs afterwards, so a plugin cannot place itself. `oma-space install` is that step made explicit: it puts the directory in `~/.config/omarchy/plugins/`, takes `omarchy.workspaces` out of the bar layout, and stands the tabs at its exact position in its section, so nothing else on the bar moves. Idempotent, backed up, and atomic — it is rewriting the user's whole bar, and the failure mode of getting that wrong is a shell with no bar at all. Interface: `docs/install.md`.
+
+It also replaces a development symlink with a real directory. That is not tidiness: the shell's own validator refuses a plugin folder containing symlinks, and the watcher behind live reload is `inotifywait -r`, which does not follow one — so a symlinked checkout is both unpublishable and unreloadable.
+
+The two surfaces are split by what a hover card *can* be, not by taste. A hover card is a passive overlay with no focus grab — pointer events reach it, keystrokes never do — so a name could not be typed into one. The panel takes keyboard focus, which is also why it cannot be the thing that opens on hover: a glance that steals focus from what you were typing is worse than no glance. Hover keeps the glance, a button gets the keyboard.
+
+**Any tab edits any workspace.** A tab is only on the bar while its workspace is running, so the workspaces most in need of a name — the empty ones, the ones you have not arranged yet — are exactly the ones with no tab to hover. Editing is therefore addressed by *subject*, not by tab: the panel opens on the workspace whose tab you came from, and every one of the ten is one click away in the list below it. Nothing is reachable only from a particular tab, and nothing has to be reached through the scratch tab.
+
+**Renaming is not capturing, and the panel says which is which.** `save` replaces a definition with what is open right now; that is the point of it, and it is the wrong thing to do to a workspace whose name you are only correcting — an empty one would come back with no apps. So labels get their own verb, `oma-space edit`, which loads the definition and changes two fields. The panel's button is named for what it does to the apps on disk: **Capture** for a workspace with nothing saved, **Save** for the name and icon alone, **Re-capture** for the deliberate act of throwing the old apps away. Interface: `docs/edit.md`.
+
+**Right-click a tab to open its panel.** Hover-then-click is the discoverable path; a right-click is the one you use once you know where you are going. Left click stays navigation and nothing else.
+
+**And the panel answers to the shell.** A bar widget is only treated as owning a panel if it exposes `open()`, `close()` and `opened`, so it does: `omarchy-shell shell toggle io.github.tussky.oma-space` opens it from a keybind or a script, `togglePanelAt` reaches it by bar position, and Omarchy's arrow navigation moves between it and the panels beside it. The panel itself is built the first time it opens — ten tabs each holding a panel window from startup is a cost for something most of them never show.
+
+**Rebuilt rather than hijacked.** Bar widgets register under their manifest id, and `omarchy.workspaces` is a first-party manifest inside `/usr/share/omarchy/shell`. A plugin claiming that id would clobber Omarchy's widget by scan order — nondeterministically, and for every bar on the machine. So the takeover is by placement, not by name: oma-space's tabs go into the bar layout and Omarchy's widget comes out of it.
 
 **A definition hooks onto an Omarchy workspace; it does not create a new one.** Omarchy already has ten workspaces, reachable with `Super+1`…`Super+0`. Every oma-space definition maps onto one of those ten. Those binds already exist and belong to Omarchy — oma-space does not own, generate, or rewrite them.
+
+**And onto exactly one, from exactly one.** A workspace holds one configuration or none. Two things called "Coding" and "Writing" both claiming `Super+3` would make the bind mean two things, which is the one thing a positional entry point cannot survive — so the store is shaped to make it impossible rather than checked for it afterwards (see Architecture). Everything downstream is addressed by index because of it: `restore 3` needs no disambiguation, and the panel is a map of the ten rather than a list.
+
+**One bind of its own: fill this workspace.** `oma-space open` rebuilds whatever was saved for the workspace you are standing on — restore addressed by index, so a single key serves all ten. It fills gaps rather than requiring an empty workspace, because the press is deliberate, and it duplicates nothing, so a second press does nothing. Suggested rather than shipped: `SUPER+R` is a line the user adds to their own `bindings.lua`, and Omarchy's ten stay Omarchy's. Interface: `docs/open.md`.
+
+The gesture this replaces is pressing `Super+3` a second time, which is the one everybody reaches for and is not available: re-focusing the workspace you are already on emits **no** `workspace` event, so nothing outside the keymap can see the second press. Having it would mean owning `Super+1`…`0` — the whole of what the paragraph above rules out — to buy a keystroke that a key of its own already provides.
 
 The `shortcut` field on a definition is therefore a **reference** to the Omarchy bind that reaches this workspace, held so the panel and menu can show the user how to get there. It is descriptive, not authoritative.
 
@@ -126,7 +185,9 @@ This gives every workspace two entry points, and they are complementary rather t
 
 ### F7 · First-run: capture, not presets
 
-**On first run, offer to save the user's current setup as a workspace.** It's personalised, it's instantly correct, and it teaches the core mechanic in a single action. Ship at most one illustrative preset (Coding), not four speculative ones.
+**No presets, and no automatic first capture.** The onboarding is the install itself: `oma-space install` finishes by saying nothing is saved yet and where to start, and the panel's list of ten shows nine empty rows the moment it opens — the empty state teaches the mechanic without writing anything on the user's behalf.
+
+The offer-to-capture-on-first-run flow from v0.1 is **deferred**: capture is one click from every tab already, and a plugin that writes to the store before being asked is the wrong first impression. Presets stay out for the reason they always were — a workspace is personal, and a speculative "Coding" that opens the wrong editor in the wrong directory is worse than an empty slot.
 
 ---
 
@@ -142,13 +203,15 @@ The rules also cannot work for an **already-running** app: a new window spawned 
 
 **Use spawn-then-claim instead:**
 
-1. Snapshot current client addresses (`hyprctl clients -j`).
-2. `hyprctl dispatch exec <cmd>`.
-3. Listen on `$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock` for `openwindow>>address,workspace,class,title`.
-4. Match on class, with a timeout so a failed launch doesn't hang the sequence.
-5. `hyprctl dispatch movetoworkspacesilent <N>,address:0x<addr>`.
+1. Subscribe to `$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock` **before** launching. Subscribing afterwards races the window: a fast app maps before the subscription lands.
+2. Launch the app — **ourselves**, not through Hyprland. `hl.dsp.exec_cmd` exists, but it takes a command string and nothing else: no working directory. A definition exists for its `cwd`; routing the launch through the compositor would throw it away.
+3. Read `openwindow>>address,workspace,class,title` until the class matches `matchClass`.
+4. Match with a timeout, so a failed launch doesn't hang the sequence.
+5. Move that address onto the workspace, silently.
 
 More code, but it works for every app including already-running ones.
+
+**The dispatcher names above are gone.** Hyprland 0.56 parses a Lua API and nothing else: `hyprctl dispatch workspace 1`, `movetoworkspacesilent` and `hyprctl keyword` all fail on a current Omarchy machine. The calls that replace them — and the traps in them, starting with `ok` being no evidence a call did anything — are in `docs/restore.md`. Omarchy's own scripts drive it the same way, which is where the shapes were read from.
 
 ### 2 · Plugins run unsandboxed in the shell process
 
@@ -164,6 +227,7 @@ Undefined lifecycle behaviour is the main reason tools in this category get unin
 | Event | Behaviour |
 |---|---|
 | **Open a workspace** | Switch to it, apply layout, launch only apps not already present. |
+| **Arrive on an empty one** | It has a definition with apps: restore it, once. Anything already open means it is left alone. |
 | **Open one already populated** | No-op for running apps; fill gaps only. Never duplicate. |
 | **Switch away** | Apps keep running. Leaving is not closing. |
 | **Close a workspace** | Explicit action only, never automatic. Offers to capture before closing. |
@@ -177,42 +241,58 @@ Three layers, two languages. QML draws; Python does everything else — the mode
 
 ```
 oma-space/
-├── manifest.json          kinds: ["bar-widget", "panel", "service"]
+├── manifest.json          kinds: ["bar-widget", "service"]
+│                          the bar widget is allowMultiple — one instance per workspace
 │
 ├── *.qml                  render layer — one file per surface
-│                            BarWidget.qml   active-workspace indicator; hover shows F1 for it
-│                            Panel.qml       the side preview
+│                            BarWidget.qml   one workspace on the bar; hover shows F1 for it
 │                            Service.qml     live state, subscribes to Hyprland events
 │
 ├── oma-space              helper layer — one executable, subcommand per verb
 │                            capture <index>   the workspace -> a definition, on stdout
+│                            save <name>       a definition -> ~/.config/oma-space/workspaces
+│                            edit <index>      a definition's name and icon, in place
 │                            live              every workspace and its windows, on stdout
-│                            restore <name>    a definition -> a live workspace
-│                            list --json       every saved definition, normalised
+│                            restore <index>   a workspace -> whatever is saved for it
+│                            open [index]      the same, defaulting to where you are
+│                            list [--json]     all ten workspaces, normalised
+│                            install           the tabs onto the bar, in Omarchy's place
 │
-└── omaspace/              the package the executable dispatches into
+└── *.py                   the modules the executable dispatches into
                              workspace.py    model — schema, defaults, validation, JSON I/O
-                             capture.py      F3
-                             live.py         F1
+                             capture.py      F3 — reads; returns a Workspace
+                             save.py         F3 — writes; the step capture leaves to the user
+                             edit.py         F6 — labels only; the write that is not a capture
+                             live.py         F1 — what is open now
+                             list.py         F1 — what is saved
                              restore.py      F4
-                             store.py        ~/.config/oma-space/workspaces I/O
+                             open.py         F4 by index — what the keybind runs
+                             store.py        the ten slots in ~/.config/oma-space/workspaces
+                             install.py      F6 — the tabs onto the bar; rewrites shell.json
+                             uninstall.py    F6 — the tabs off it, and Omarchy's strip back
 ```
 
-**The model is Python, not QML JavaScript.** A `.js` model file is loaded *into* the shell process, which is the side of constraint 2 that owns the lock screen — and it would be a second implementation of the schema, drifting against the one capture and restore already need. One `workspace.py`, on the same side of the boundary as the code that produces and consumes definitions.
+**The model is Python, not QML JavaScript.** A `.js` model file is loaded *into* the shell process, which is the side of constraint 2 that owns the lock screen — and it would be a second implementation of the schema, drifting against the one capture and restore already need. One `workspace.py`, on the same side of the boundary as the code that produces and consumes definitions — and the verbs hand each other that object rather than JSON, so a definition is parsed at most once on its way to disk.
 
 QML therefore never constructs a `Workspace`. It receives plain JSON over a `Process` stdout and renders it, which is why `list --json` emits definitions **normalised** — round-tripped through the model, every key present at its default — so the panel never guards against a missing field.
 
-**One service, however many bars.** A bar surface exists per monitor, so the widget reads live state off the shared `service` instance rather than holding its own — otherwise every screen would spawn its own helper process for the same answer. Nothing is kept fresh while nobody is looking: the widget registers as a watcher when its popup opens, and only then does a Hyprland event cost a refresh.
+**One service, however many tabs.** A bar surface exists per monitor and a tab per workspace, so a tab reads live state off the shared `service` instance rather than holding its own — otherwise ten tabs on two screens would be twenty helper processes answering the same question. Nothing is kept fresh while nobody is looking: the widget registers as a watcher when its popup opens, and only then does a Hyprland event cost a refresh.
 
 JavaScript survives only inside `.qml` files, for presentation: formatting, small handlers, binding glue. The moment it parses helper output or touches a file, constraint 2 is back.
 
-`oma-space` is a thin dispatcher: it resolves `omaspace/` relative to its own path and hands `argv` to the subcommand. Nothing outside the package is importable, so the plugin stays a directory you can copy.
+`oma-space` is a thin dispatcher: it puts its own directory on `sys.path` and hands `argv` to the subcommand, importing one module per verb so a verb that fails to import cannot take the others down. Flat rather than a package, because the plugin directory *is* the unit Omarchy installs — a package folder inside it would be a second nesting for no gain. It also turns off bytecode writing: the plugin lives under the user's config, and a `__pycache__` appearing there on every bar refresh is litter.
 
-Definitions live outside the plugin so they survive reinstalling it — one JSON file each, in `~/.config/oma-space/workspaces/`. The filename is the definition's `name`, lowercased with spaces hyphenated: `"Coding"` → `coding.json`, `"Deep Work"` → `deep-work.json`. `name` is a display string, so it is slugified rather than used raw.
+**Two kinds of configuration, on two sides of the boundary.** What a *tab* is — which workspace it points at, what it draws, whether it stays on the bar when that workspace empties — is bar layout, and lives in its `shell.json` entry beside every other widget's settings. What a *workspace* is — name, icon, layout, apps — is a definition, and lives in the store. Neither file knows about the other: a tab with no definition behind it is a plain number that still navigates, and a definition with no tab on the bar is still reachable by its Omarchy bind and from any tab's panel.
+
+Definitions live outside the plugin so they survive reinstalling it, in `~/.config/oma-space/workspaces/`. **The store is the ten workspaces**: slot N is `N.json`, occupied or empty. Saving fills a slot; it never adds one.
+
+A workspace has one configuration or none, so the workspace is the identity and a second configuration for the same workspace is unrepresentable rather than merely discouraged. `name` is a label: renaming a workspace moves no file, two slots may carry the same name, and nothing is ever looked up by one. A hand-edited `index` that disagrees with its filename loses to the filename, which is the only way the invariant can be attacked once the shape enforces it.
 
 Capture and restore are testable from a terminal before any QML exists, which de-risks the hard half first and keeps a parsing bug out of the process that owns the lock screen.
 
-This also lands Oma-space in `panel` and `service` — two of the least-used plugin kinds in the Omarchy registry (54 and 198 of 872), which is free positioning against a crowded `bar-widget` field.
+It also lands Oma-space in `service`, one of the least-used plugin kinds in the Omarchy registry — a shared, long-lived reader is the right shape for state ten tabs and a panel all render, and it happens to be uncommon.
+
+**No `panel` kind.** A dedicated side surface was declared before it was written, and declaring it cost more than the stub was worth: the shell treats any plugin carrying `panel`, `overlay` or `menu` as owned by the panel loader, which takes the bar widget out of `summon`'s reach. Dropping the kind is what makes `omarchy-shell shell toggle <id>` open the real panel. The all-ten view lives in the tab's own panel (F6); a separate side surface is a v2 question.
 
 ---
 
@@ -222,10 +302,18 @@ The competition demo, in about ninety seconds:
 
 1. Arrange a real workspace — editor, browser, terminal. Press capture. Name it "Coding."
 2. Wipe it. Open a fresh workspace, hit the shortcut, watch it rebuild — right apps, right layout, right directories.
-3. Open the side panel to show every workspace at a glance.
+3. Walk the strip: every workspace says its name and what is in it under the cursor.
 
 ---
 
+## Known limits
+
+**Multi-monitor is single-output in v1, and says so.** Definitions record no output, and the focused mark comes from `Hyprland.focusedWorkspace`, which is global — so on a second monitor every strip marks the same tab, whichever screen it is on. Restore puts a workspace's apps wherever that workspace currently lives. This is stated in the README rather than left to be discovered.
+
+**Tiled sizes are captured but not restored** (F4). The fraction is on disk; Hyprland takes no absolute size for a tiled window, and restore says on stderr when it skipped one.
+
+**Browser tabs are out of scope, permanently** (F3).
+
 ## Open questions
 
-1. **Multi-monitor.** Definitions currently assume one output. Does a workspace remember which monitor it belonged to? Deferring, but it will come up.
+1. **Multi-monitor.** Does a workspace remember which output it belonged to, and should a strip show only its own screen's workspaces? Both are v2 questions.

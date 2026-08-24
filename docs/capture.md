@@ -3,6 +3,12 @@
 `./capture.py <workspace-index>` — one workspace, as a definition on stdout.
 Rationale lives in prd.md F3; this is the interface and the field sources.
 
+**Python callers use the module, not the command.** `capture.workspace(index)`
+returns a `Workspace`; `save` and `restore` take that object and parse nothing.
+The CLI is a wrapper around it for QML, which must not do this work in the
+process that owns the lock screen (prd.md constraint 2). Saving what comes back
+is `docs/save.md`.
+
 ## Contract
 
 - One JSON object on **stdout**, single line. Nothing else on stdout, ever.
@@ -11,13 +17,15 @@ Rationale lives in prd.md F3; this is the interface and the field sources.
   defaults. Skipping windows silently is worse than emitting partial ones.
 - `name` is always `""` — the user supplies it at save time, so a correct capture
   fails validation with exactly `["workspace has no name"]`.
+- The document is **normalised**: it is `Workspace.to_json()`, so every key is
+  present at its default and a reader never guards against a missing field.
 
 Single-line matters: `Service.qml` reads stdout with `SplitParser`, which fires per
 line, so a pretty-printed document would reach `JSON.parse` as fragments — inside
 the process that owns the lock screen.
 
 ```json
-{"index":1,"name":"","icon":"","layout":"scrolling","apps":[
+{"index":1,"name":"","icon":"","layout":"scrolling","shortcut":"Super+1","apps":[
   {"exec":"foot -e nvim","matchClass":"foot","label":"nvim",
    "cwd":"/home/teapot/Projects/oma-space","floating":false,
    "fullscreen":false,"size":[0.47,0.96]}]}
@@ -33,6 +41,7 @@ no error at all. Copy the names from the table.
 |---|---|
 | `index` | `clients[].workspace.id` |
 | `layout` | `workspaces[].tiledLayout` — per-workspace, **not** `general:layout` |
+| `shortcut` | derived from `index`, never read from Hyprland — a reference to the Omarchy bind, descriptive only (prd.md F6) |
 | `matchClass` | `clients[].initialClass` — the class at map time, which is what `openwindow` carries |
 | `exec` | `.desktop` `Exec=`, `omarchy-launch-tui <program>` for Omarchy TUIs, else `/proc/<pid>/cmdline` |
 | `label` | the program inside a terminal, else `.desktop` `Name=` |
