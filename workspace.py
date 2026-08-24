@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """oma-space · workspace definition data model.
 
 JSON on disk, Workspace in memory. Nothing here raises — prd.md constraint 2.
@@ -45,23 +46,31 @@ def _display_path(path):
     home = os.path.expanduser("~")
     if path == home:
         return "~"
-    return "~" + path[len(home):] if path.startswith(home + os.sep) else path
+    return "~" + path[len(home) :] if path.startswith(home + os.sep) else path
 
 
 def _display_size(size):
     if size is None:
         return None
-    if not (isinstance(size, list) and len(size) == 2 and all(is_fraction(n) for n in size)):
+    if not (
+        isinstance(size, list) and len(size) == 2 and all(is_fraction(n) for n in size)
+    ):
         return f"bad size {size!r}"
     return f"{round(size[0] * 100)}%×{round(size[1] * 100)}%"
 
 
 def _display_state(app):
-    return " ".join(
-        state
-        for state, on in (("floating", app.floating), ("fullscreen", app.fullscreen))
-        if on
-    ) or "tiled"
+    return (
+        " ".join(
+            state
+            for state, on in (
+                ("floating", app.floating),
+                ("fullscreen", app.fullscreen),
+            )
+            if on
+        )
+        or "tiled"
+    )
 
 
 def _cell(value):
@@ -86,8 +95,12 @@ class WorkspaceApp:
     def __init__(self, opts=None):
         opts = opts or {}
         self.exec = opts.get("exec") or ""
-        self.match_class = opts.get("matchClass") or ""  # machine key: claims the window on openwindow
-        self.label = opts.get("label") or ""  # human name the panel shows: "nvim", "WhatsApp"
+        self.match_class = (
+            opts.get("matchClass") or ""
+        )  # machine key: claims the window on openwindow
+        self.label = (
+            opts.get("label") or ""
+        )  # human name the panel shows: "nvim", "WhatsApp"
         self.cwd = opts.get("cwd")
         self.floating = bool(opts.get("floating", False))
         self.fullscreen = bool(opts.get("fullscreen", False))
@@ -116,6 +129,9 @@ class WorkspaceApp:
         ):
             errors.append(f'app "{self.exec}" size must be [w, h] fractions in (0, 1]')
         return errors
+
+    def generate_dispatch_statement(self):
+        return
 
     def to_json(self):
         return {
@@ -168,9 +184,15 @@ class Workspace:
         self.name = opts.get("name") or ""
         self.icon = opts.get("icon") or ""
         self.layout = opts.get("layout") or DEFAULT_LAYOUT
-        self.shortcut = opts.get("shortcut") or shortcut_for_index(self.index)  # reference only
+        self.shortcut = opts.get("shortcut") or shortcut_for_index(
+            self.index
+        )  # reference only
         apps = opts.get("apps") or []
-        self.apps = [WorkspaceApp.from_value(app) for app in apps] if isinstance(apps, list) else []
+        self.apps = (
+            [WorkspaceApp.from_value(app) for app in apps]
+            if isinstance(apps, list)
+            else []
+        )
 
     def validate(self):
         errors = []
@@ -236,7 +258,9 @@ class Workspace:
         if self.apps:
             lines.append("")
             lines.extend(
-                _rows([self.APP_COLUMNS] + [app._row() for app in self.apps], indent="  ")
+                _rows(
+                    [self.APP_COLUMNS] + [app._row() for app in self.apps], indent="  "
+                )
             )
         errors = self.validate()
         if errors:

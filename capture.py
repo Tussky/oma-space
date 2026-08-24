@@ -1,5 +1,10 @@
 #!/usr/bin/python3
-"""Capture one Hyprland workspace as a definition, as JSON on stdout.
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Capture one Hyprland workspace as a definition.
+
+`workspace(index)` returns a Workspace; Python callers — save, restore — take
+that and never parse anything. main() is the CLI wrapper QML reads, and exists
+only because QML must not do this work itself (prd.md constraint 2).
 
 Interface and field sources:  docs/capture.md
 
@@ -11,6 +16,8 @@ import os
 import subprocess
 import sys
 
+from workspace import Workspace
+
 SHELLS = {"bash", "zsh", "fish", "sh", "dash", "ksh", "tcsh", "csh", "nu", "elvish"}
 
 # What a terminal window is *for*. Anything else a shell is running — uv, git, a
@@ -19,23 +26,73 @@ SHELLS = {"bash", "zsh", "fish", "sh", "dash", "ksh", "tcsh", "csh", "nu", "elvi
 # Unlisted programs aren't lost: the window captures as a terminal in its cwd.
 TUI_PROGRAMS = {
     # editors
-    "nvim", "vim", "vi", "hx", "helix", "emacs", "nano", "micro", "kak", "fresh",
+    "nvim",
+    "vim",
+    "vi",
+    "hx",
+    "helix",
+    "emacs",
+    "nano",
+    "micro",
+    "kak",
+    "fresh",
     # AI agents
-    "claude", "codex", "gemini", "aider", "goose", "opencode", "crush", "amp",
-    "cursor-agent", "qwen", "copilot", "gptme",
+    "claude",
+    "codex",
+    "gemini",
+    "aider",
+    "goose",
+    "opencode",
+    "crush",
+    "amp",
+    "cursor-agent",
+    "qwen",
+    "copilot",
+    "gptme",
     # system monitors
-    "btop", "htop", "top", "btm", "bottom", "nvtop", "glances", "atop",
+    "btop",
+    "htop",
+    "top",
+    "btm",
+    "bottom",
+    "nvtop",
+    "glances",
+    "atop",
     # Omarchy's own TUI menu entries and keybinds
-    "impala", "bluetuith", "wiremix", "cliamp", "lazydocker", "fastfetch",
+    "impala",
+    "bluetuith",
+    "wiremix",
+    "cliamp",
+    "lazydocker",
+    "fastfetch",
     # files, git, containers
-    "yazi", "ranger", "lf", "nnn", "mc", "lazygit", "tig", "gitui", "k9s",
+    "yazi",
+    "ranger",
+    "lf",
+    "nnn",
+    "mc",
+    "lazygit",
+    "tig",
+    "gitui",
+    "k9s",
     # disk usage — dua ships with Omarchy; dust and duf are left out on purpose,
     # they print and exit rather than opening anything
-    "dua", "ncdu", "gdu", "diskonaut",
+    "dua",
+    "ncdu",
+    "gdu",
+    "diskonaut",
     # multiplexers — the session is the point, even if its panes are invisible
-    "tmux", "zellij", "screen",
+    "tmux",
+    "zellij",
+    "screen",
     # chat, mail, media
-    "weechat", "irssi", "neomutt", "aerc", "newsboat", "ncmpcpp", "cmus",
+    "weechat",
+    "irssi",
+    "neomutt",
+    "aerc",
+    "newsboat",
+    "ncmpcpp",
+    "cmus",
 }
 
 # A couple of these are a mode of a command-line tool rather than a tool of their
@@ -51,9 +108,29 @@ INTERPRETERS = {"python", "python3", "node", "bun", "deno", "ruby", "perl"}
 SCRIPT_SUFFIXES = (".py", ".js", ".mjs", ".cjs", ".ts", ".rb", ".pl")
 
 # Fallback when a terminal has no .desktop entry to declare TerminalEmulator.
-KNOWN_TERMINALS = {"foot", "Alacritty", "kitty", "com.mitchellh.ghostty", "org.wezfurlong.wezterm"}
+KNOWN_TERMINALS = {
+    "foot",
+    "Alacritty",
+    "kitty",
+    "com.mitchellh.ghostty",
+    "org.wezfurlong.wezterm",
+}
 
-EXEC_FIELD_CODES = {"%f", "%F", "%u", "%U", "%d", "%D", "%n", "%N", "%i", "%c", "%k", "%v", "%m"}
+EXEC_FIELD_CODES = {
+    "%f",
+    "%F",
+    "%u",
+    "%U",
+    "%d",
+    "%D",
+    "%n",
+    "%N",
+    "%i",
+    "%c",
+    "%k",
+    "%v",
+    "%m",
+}
 
 MAX_TREE_DEPTH = 4
 
@@ -74,9 +151,14 @@ def warn(msg):
 def hyprctl(*args):
     """One hyprctl -j call. --batch is not usable here: with -j it emits
     concatenated JSON documents rather than one."""
-    proc = subprocess.run(
-        ["hyprctl", "-j", *args], capture_output=True, text=True
-    )
+    try:
+        proc = subprocess.run(
+            ["hyprctl", "-j", *args], capture_output=True, text=True, timeout=10
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        # Same shape as the failures below: this module's callers already
+        # handle RuntimeError, and a None here would surface as a TypeError.
+        raise RuntimeError(f"hyprctl {' '.join(args)}: {error}")
     if proc.returncode != 0:
         raise RuntimeError(f"hyprctl {' '.join(args)} failed: {proc.stderr.strip()}")
     try:
@@ -204,7 +286,9 @@ def terminal_contents(pid):
         if depth < MAX_TREE_DEPTH:
             frontier.extend((c, depth + 1) for c in proc_children(current))
     if ignored:
-        warn(f"ignoring {', '.join(dict.fromkeys(ignored))}; capturing the terminal and its directory")
+        warn(
+            f"ignoring {', '.join(dict.fromkeys(ignored))}; capturing the terminal and its directory"
+        )
     return None, cwd
 
 
@@ -296,7 +380,7 @@ def omarchy_program(cls):
     other class, so only Omarchy's own default is recognised."""
     if not cls.startswith(OMARCHY_APP_ID):
         return None
-    return cls[len(OMARCHY_APP_ID):] or None
+    return cls[len(OMARCHY_APP_ID) :] or None
 
 
 def class_host(cls):
@@ -304,7 +388,7 @@ def class_host(cls):
     hyphen: hosts, paths and profile names all contain hyphens."""
     if not cls.startswith("chrome-"):
         return None
-    host = cls[len("chrome-"):].split("__", 1)[0]
+    host = cls[len("chrome-") :].split("__", 1)[0]
     return host or None
 
 
@@ -339,7 +423,9 @@ def resolve(client, by_class, by_host, shared_pids=frozenset()):
         if pid in shared_pids:
             # Every window's shell is a sibling under the one process,
             # with nothing tying one to this window. A guess misfiles the cwd.
-            warn(f"{cls} serves several windows from pid {pid}; capturing the terminal only")
+            warn(
+                f"{cls} serves several windows from pid {pid}; capturing the terminal only"
+            )
             return base, (entry or {}).get("Name", cls), None
         program, cwd = terminal_contents(pid)
         if program:
@@ -390,14 +476,14 @@ def app_size(client, monitors):
 # --- capture ----------------------------------------------------------------
 
 
-def capture(index):
+def _definition(index):
     # One snapshot: re-reading mid-run would describe a state that never existed.
     clients = hyprctl("clients")
     workspaces = hyprctl("workspaces")
     monitors = hyprctl("monitors")
 
-    workspace = next((w for w in workspaces if w.get("id") == index), None)
-    if workspace is None:
+    target = next((w for w in workspaces if w.get("id") == index), None)
+    if target is None:
         raise RuntimeError(f"workspace {index} does not exist or holds no windows")
 
     monitors_by_id = {m.get("id"): m for m in monitors}
@@ -432,9 +518,20 @@ def capture(index):
         "index": index,
         "name": "",
         "icon": "",
-        "layout": workspace.get("tiledLayout") or "",
+        "layout": target.get("tiledLayout") or "",
         "apps": apps,
     }
+
+
+def workspace(index, name=None, icon=None):
+    """The workspace as a Workspace — what every Python caller wants.
+
+    Validation is the caller's, not ours: an unnamed capture is unfinished by
+    design (prd.md F3), so a fresh one fails validate() with exactly
+    ["workspace has no name"] until a name is supplied here or at save time.
+    """
+    definition, _ = Workspace.from_capture(_definition(index), name=name, icon=icon)
+    return definition
 
 
 def main(argv):
@@ -448,13 +545,13 @@ def main(argv):
         return 2
 
     try:
-        definition = capture(index)
+        definition = workspace(index)
     except RuntimeError as e:
         warn(str(e))
         return 1
 
     # Single line: safe for both StdioCollector and Service.qml's SplitParser.
-    json.dump(definition, sys.stdout, separators=(",", ":"))
+    json.dump(definition.to_json(), sys.stdout, separators=(",", ":"))
     sys.stdout.write("\n")
     return 0
 

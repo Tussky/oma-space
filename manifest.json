@@ -1,45 +1,67 @@
 {
 	"schemaVersion": 1,
-	"id": "io.github.teapot.oma-space",
+	"id": "io.github.tussky.oma-space",
 	"name": "oma-space",
-	"version": "0.0.1",
-	"author": "teapot",
-	"license": "MIT",
-	"description": "Arrange a Hyprland workspace the way you like it, capture it, and rebuild it on demand — with a bar widget and side panel to see every workspace at a glance.",
+	"version": "1.0.0",
+	"author": "Tussky",
+	"license": "GPL-3.0-or-later",
+	"description": "Arrange a Hyprland workspace the way you like it, capture it, and rebuild it on demand — with one bar tab per workspace, each hovering to show what is open in it.",
 	"kinds": [
 		"bar-widget",
-		"panel",
 		"service"
 	],
 	"entryPoints": {
 		"barWidget": "BarWidget.qml",
-		"panel": "Panel.qml",
 		"service": "Service.qml"
 	},
 	"barWidget": {
-		"displayName": "Workspace management",
-		"description": "The active workspace on the bar; hover it to see what is open there.",
-		"category": "Workspace",
-		"allowMultiple": false,
+		"displayName": "Workspace tab",
+		"description": "One workspace on the bar. Click to go there; hover to see its name and what is open in it.",
+		"category": "Compositor",
+		"allowMultiple": true,
 		"defaultSection": "left",
 		"defaults": {
-			"icon": "",
-			"number": true
+			"index": 1,
+			"label": "Icon",
+			"pinned": false,
+			"scratch": false
 		},
 		"schema": [
 			{
-				"key": "icon",
-				"type": "string",
-				"label": "Widget glyph",
-				"defaultValue": "",
-				"description": "The character drawn on the bar. Empty uses the built-in workspace glyph."
+				"key": "index",
+				"type": "integer",
+				"label": "Workspace",
+				"min": 1,
+				"max": 10,
+				"step": 1,
+				"defaultValue": 1,
+				"description": "Which of Omarchy's ten this tab is attached to — the one Super+N reaches. Ignored while Scratch tab is on."
 			},
 			{
-				"key": "number",
+				"key": "label",
+				"type": "enum",
+				"label": "Tab shows",
+				"options": [
+					"Number",
+					"Icon",
+					"Name"
+				],
+				"defaultValue": "Icon",
+				"description": "Icon and Name come from what is saved for this workspace; both fall back to the number while nothing is. Pick the icon in the tab's panel."
+			},
+			{
+				"key": "pinned",
 				"type": "boolean",
-				"label": "Show the workspace number",
-				"defaultValue": true,
-				"description": "The number beside the glyph, so the bar says which of the ten you are on. Workspace 10 reads as 0, matching its Super+0 bind."
+				"label": "Always on the bar",
+				"defaultValue": false,
+				"description": "Keep the tab on the bar while its workspace is empty. Off, every tab — scratch included — appears when a window opens there and leaves when the last one closes."
+			},
+			{
+				"key": "scratch",
+				"type": "boolean",
+				"label": "Scratch tab",
+				"defaultValue": false,
+				"description": "Pin this tab to workspace 10 and never save it — the one workspace with no configuration. Like any tab it leaves the bar while it is empty; add Always on the bar to keep it there."
 			}
 		]
 	}
