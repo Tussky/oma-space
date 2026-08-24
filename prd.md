@@ -179,6 +179,12 @@ The two surfaces are split by what a hover card *can* be, not by taste. A hover 
 
 **And the panel answers to the shell.** A bar widget is only treated as owning a panel if it exposes `open()`, `close()` and `opened`, so it does: `omarchy-shell shell toggle io.github.tussky.oma-space` opens it from a keybind or a script, `togglePanelAt` reaches it by bar position, and Omarchy's arrow navigation moves between it and the panels beside it. The panel itself is built the first time it opens — ten tabs each holding a panel window from startup is a cost for something most of them never show.
 
+**It stands in for `omarchy.workspaces`, and says so in the manifest.** `omarchy.clonedFrom` is the shell's own model for a plugin that takes another's place: on enable the tab is put where the source stood, and on disable or removal the source is restored there and re-enabled. Declaring it buys the thing a plugin cannot do for itself — Omarchy never runs plugin code on removal, by design — so `omarchy plugin remove` resets the bar to Omarchy's own strip without oma-space being present to help.
+
+The field is not a claim to be a fork of that widget's code. It is the shell's word for the relationship, and the relationship is exactly this one: while oma-space is enabled, it *is* the workspace strip.
+
+What it cannot fix is the tail: the disable path swaps one layout entry and stops, so nine tabs are left behind as dead slots. That is the cost of a widget instance per workspace, and it is paid only by someone who removes the plugin through Omarchy rather than through `oma-space uninstall`, which takes all ten off.
+
 **Rebuilt rather than hijacked.** Bar widgets register under their manifest id, and `omarchy.workspaces` is a first-party manifest inside `/usr/share/omarchy/shell`. A plugin claiming that id would clobber Omarchy's widget by scan order — nondeterministically, and for every bar on the machine. So the takeover is by placement, not by name: oma-space's tabs go into the bar layout and Omarchy's widget comes out of it.
 
 **A definition hooks onto an Omarchy workspace; it does not create a new one.** Omarchy already has ten workspaces, reachable with `Super+1`…`Super+0`. Every oma-space definition maps onto one of those ten. Those binds already exist and belong to Omarchy — oma-space does not own, generate, or rewrite them.

@@ -3,11 +3,14 @@
 `oma-space uninstall` — the tabs off the bar, and Omarchy's strip back.
 Rationale lives in prd.md F6; this is the interface.
 
-Not optional, and not something Omarchy can do for us. `install` removes
-`omarchy.workspaces` from the bar layout, and `omarchy plugin remove` never puts it
-back — worse, the shell's disable path drops **one** layout entry per plugin id, so a
-strip of ten tabs would leave nine dead slots behind and a bar with no workspace
-navigation at all.
+`omarchy plugin remove` does put `omarchy.workspaces` back on its own — the manifest
+declares `omarchy.clonedFrom`, and the shell restores a clone's source when the clone is
+disabled. What it does not do is clean up after a plugin that owns more than one bar
+entry: its disable path swaps **one** layout entry and stops, leaving the other nine tabs
+behind as dead slots.
+
+So this verb is the tidy path, not the only one: it takes every tab off, puts Omarchy's
+strip back where the strip stood, and leaves nothing behind.
 
 ## Contract
 

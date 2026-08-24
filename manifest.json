@@ -64,5 +64,8 @@
 				"description": "Pin this tab to workspace 10 and never save it — the one workspace with no configuration. Like any tab it leaves the bar while it is empty; add Always on the bar to keep it there."
 			}
 		]
+	},
+	"omarchy": {
+		"clonedFrom": "omarchy.workspaces"
 	}
 }

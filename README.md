@@ -66,11 +66,18 @@ oma-space uninstall --yes       # unattended
 
 It asks first, exactly as install does, and shows what it will put back before it does.
 
-**Use this rather than `omarchy plugin remove` on its own.** Omarchy's remove drops a
-single bar entry per plugin id, so a strip of ten tabs would leave nine dead slots behind —
-and it never puts `omarchy.workspaces` back. `oma-space uninstall` does both, and never
-touches your saved workspaces: they live in `~/.config/oma-space/workspaces/` and survive
-uninstalling, reinstalling and upgrading.
+`omarchy plugin remove io.github.tussky.oma-space` works too, and **puts Omarchy's own
+workspace strip back on its own**: the manifest declares `omarchy.clonedFrom`, so the shell
+treats oma-space as standing in for `omarchy.workspaces` and restores it — at the position
+it stood in — when the plugin is disabled or removed. No plugin code runs during removal;
+Omarchy does it.
+
+It cleans one bar entry, though, because that is what its disable path does. A strip of ten
+tabs leaves the other nine behind as dead slots — invisible on the bar, but still in your
+`shell.json`. `oma-space uninstall` removes all ten, which is why it is the tidier path.
+
+Either way your saved workspaces are untouched: they live in
+`~/.config/oma-space/workspaces/` and survive uninstalling, reinstalling and upgrading.
 
 Full options: [`docs/uninstall.md`](docs/uninstall.md).
 
