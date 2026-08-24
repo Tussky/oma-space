@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Take the tabs off the bar and give Omarchy its strip back (prd.md F6).
 
 The other half of install, and not optional: install removes `omarchy.workspaces`

@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Capture one Hyprland workspace as a definition.
 
 `workspace(index)` returns a Workspace; Python callers — save, restore — take

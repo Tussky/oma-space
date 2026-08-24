@@ -10,9 +10,9 @@ onto it empty.
 
 ![The strip on the bar](screenshots/strip.png)
 
-*Workspace 1 is saved as "communications" and wears its icon; 2 is focused, so it is
-accented and underlined; 4 has windows but nothing saved, so it falls back to its number.
-Everything else is empty, so it is not on the bar at all.*
+*Workspaces 1, 2 and 3 are saved and wear their icons — chat, agents, code. 2 is the one
+you are on, so it is accented and underlined. 4 has windows but nothing saved, so it falls
+back to its number. 5 through 10 are empty, so they are not on the bar at all.*
 
 ## What it does
 
@@ -91,6 +91,7 @@ to the apps on disk:
 | **Save** | the name and icon only. Apps, layout, sizes and working directories are untouched |
 | **Re-capture** | replaces the saved apps with what is open now. The deliberate one |
 | **Open** | rebuilds it, filling gaps and duplicating nothing |
+| **Delete** | empties the slot. Asks twice; the workspace keeps its windows |
 
 ### Icons
 
@@ -133,6 +134,7 @@ oma-space list [--json]           # all ten workspaces and what is saved for the
 oma-space capture <index>         # a workspace as a definition, JSON on stdout
 oma-space save --index <n> NAME   # capture and save in one action
 oma-space edit <index> --name X   # rename or re-icon, without capturing
+oma-space delete <index>          # empty a slot; the workspace keeps its windows
 oma-space restore <index>         # rebuild a workspace from what is saved for it
 oma-space open [index]            # the same, defaulting to where you are
 oma-space install | uninstall     # the tabs on and off the bar
@@ -190,4 +192,10 @@ did. `docs/` holds one interface contract per verb.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+GPL-3.0-or-later — see [LICENSE](LICENSE).
+
+Copyright (C) 2026 Isaac Anderson. This program is free software: you can redistribute it
+and/or modify it under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.

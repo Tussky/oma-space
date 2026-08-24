@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Save a definition to ~/.config/oma-space/workspaces.
 
 The step capture deliberately leaves to the user (prd.md F3): capture only

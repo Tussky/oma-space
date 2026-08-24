@@ -4,7 +4,7 @@
 	"name": "oma-space",
 	"version": "1.0.0",
 	"author": "Tussky",
-	"license": "MIT",
+	"license": "GPL-3.0-or-later",
 	"description": "Arrange a Hyprland workspace the way you like it, capture it, and rebuild it on demand — with one bar tab per workspace, each hovering to show what is open in it.",
 	"kinds": [
 		"bar-widget",

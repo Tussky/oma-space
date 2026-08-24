@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """A workspace's labels, without re-reading the workspace (prd.md F6).
 
 The other half of save. Save captures: it replaces a definition with what is on

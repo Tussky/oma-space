@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """oma-space — the helper layer's one executable, a subcommand per verb.
 
 Resolves the helper modules relative to its own path, so the plugin stays a
@@ -7,6 +8,7 @@ directory you can copy (prd.md Architecture).
   capture <index>   live state -> a definition, on stdout
   save <name>       a definition -> ~/.config/oma-space/workspaces
   edit <index>      a workspace's name and icon, in place
+  delete <index>    empty a workspace's slot
   restore <index>   a workspace -> whatever is saved for it
   open [index]      the same, defaulting to where you are
   list              every saved definition
@@ -26,6 +28,7 @@ USAGE = """usage: oma-space <verb> [args]
   capture <workspace-index>   the workspace as a definition, JSON on stdout
   save <name> [--index N]     save a definition; stdin unless --index is given
   edit <index> [--name|--icon] rename or re-icon a definition without capturing
+  delete <workspace-index>    empty a workspace's slot; the workspace is untouched
   restore <workspace-index>   rebuild a workspace from what is saved for it
   open [workspace-index]      the same, defaulting to the active workspace
   list [--json]               all ten workspaces and what is saved for them
@@ -52,6 +55,10 @@ def main(argv):
         import edit
 
         return edit.main(["oma-space edit", *rest])
+    if verb == "delete":
+        import delete
+
+        return delete.main(["oma-space delete", *rest])
     if verb == "restore":
         import restore
 

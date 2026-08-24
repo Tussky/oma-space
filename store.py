@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """oma-space · the ten workspace slots on disk.
 
 A workspace has one configuration or it has none. Every definition hooks onto one

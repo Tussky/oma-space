@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The ten workspaces and what is saved for each (prd.md F1, Architecture).
 
 The other half of `live`: what is *saved*, whether or not anything of theirs is

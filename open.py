@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Fill a workspace from what is saved for it (prd.md F6) — what the keybind runs.
 
 Restore with the index defaulted to wherever you are standing, and with a word

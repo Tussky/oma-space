@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Every workspace and the windows in it, right now, as JSON on stdout.
 
 What the panel and the bar widget render (prd.md F1) — icon, app name, window

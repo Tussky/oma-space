@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import Quickshell.Hyprland
 import Quickshell.Io
@@ -228,6 +229,7 @@ Item {
     onTriggered: {
       saveProcess.running = false
       editProcess.running = false
+      deleteProcess.running = false
       restoreProcess.running = false
       root.busy = false
       root.actionFinished("", 0, false, "the helper stopped responding")
@@ -275,6 +277,17 @@ Item {
       "--name", trimmed, "--icon", String(icon || "")]
     busy = true
     editProcess.running = true
+  }
+
+  // The write that takes something away. The workspace keeps its windows: this
+  // empties its slot, it does not close anything (prd.md F2).
+  function deleteWorkspace(index) {
+    if (busy || index <= 0) return
+    deleteProcess.pendingName = slotName(index) || ("workspace " + index)
+    deleteProcess.pendingIndex = index
+    deleteProcess.command = ["python3", helper, "delete", String(index)]
+    busy = true
+    deleteProcess.running = true
   }
 
   // By index, because a workspace holds one configuration or none — there is
@@ -364,6 +377,26 @@ Item {
       } else {
         root.actionFinished("edit", editProcess.pendingIndex, false,
           root.lastLine(editErr.text) || ("helper exited " + code))
+      }
+    }
+  }
+
+  Process {
+    id: deleteProcess
+    property string pendingName: ""
+    property int pendingIndex: 0
+
+    stderr: StdioCollector { id: deleteErr; waitForEnd: true }
+
+    onExited: function(code) {
+      root.busy = false
+      if (code === 0) {
+        root.refreshSlots()
+        root.actionFinished("delete", deleteProcess.pendingIndex, true,
+          "Deleted " + deleteProcess.pendingName)
+      } else {
+        root.actionFinished("delete", deleteProcess.pendingIndex, false,
+          root.lastLine(deleteErr.text) || ("helper exited " + code))
       }
     }
   }

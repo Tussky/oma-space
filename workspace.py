@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """oma-space · workspace definition data model.
 
 JSON on disk, Workspace in memory. Nothing here raises — prd.md constraint 2.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
@@ -83,6 +84,9 @@ BarWidget {
   // so a status line from another tab's action is not this tab's to render.
   property int actionIndex: 0
   property bool replacePending: false
+  // Deleting is asked for twice, like replacing: the button says so in between
+  // rather than a dialog saying it somewhere else.
+  property bool deletePending: false
   // The icon the panel will save with the name. Empty is a workspace with no icon.
   property string pickedIcon: ""
 
@@ -134,6 +138,7 @@ BarWidget {
     if (panelHost.item) panelHost.item.nameText = slot ? slot.name : ""
     root.pickedIcon = slot ? slot.icon : ""
     root.replacePending = false
+    root.deletePending = false
     root.panelStatus = ""
     root.actionIndex = 0
   }
@@ -180,6 +185,20 @@ BarWidget {
     root.panelStatus = ""
     root.actionIndex = root.subject
     service.saveWorkspace(root.subject, name, root.pickedIcon, true)
+  }
+
+  function deleteSubject() {
+    if (!service || root.subject <= 0 || !root.subjectSaved) return
+    if (!root.deletePending) {
+      root.deletePending = true
+      root.panelStatus = "Delete “" + root.subjectSlot.name + "”? Press again. "
+        + "The workspace keeps its windows."
+      return
+    }
+    root.deletePending = false
+    root.panelStatus = ""
+    root.actionIndex = root.subject
+    service.deleteWorkspace(root.subject)
   }
 
   function openSaved(index) {
@@ -235,7 +254,14 @@ BarWidget {
       if (index !== root.actionIndex) return
       root.panelStatus = message
       root.replacePending = false
+      root.deletePending = false
       if (!ok) return
+      // The slot is empty now, so the panel is looking at a workspace with
+      // nothing saved: the fields have to say so before the store comes back.
+      if (verb === "delete" && index === root.subject) {
+        if (panelHost.item) panelHost.item.nameText = ""
+        root.pickedIcon = ""
+      }
       // A restore switched workspace and launched windows; the panel has done
       // its job and is in the way of what just opened.
       if (verb === "restore") root.panelOpen = false
@@ -634,6 +660,19 @@ BarWidget {
             foreground: root.bar ? root.bar.foreground : Color.foreground
             enabled: !root.busy && nameField.text.trim() !== ""
             onClicked: root.recaptureSubject()
+          }
+
+          Button {
+            // Asked for twice, and the button is where it is asked: a dialog
+            // for this would be a second surface for a one-word question.
+            text: root.deletePending ? "Delete?" : "Delete"
+            bordered: true
+            fontSize: Style.font.bodySmall
+            foreground: root.deletePending
+              ? (root.bar ? root.bar.urgent : Color.urgent)
+              : (root.bar ? root.bar.foreground : Color.foreground)
+            enabled: !root.busy
+            onClicked: root.deleteSubject()
           }
         }
 

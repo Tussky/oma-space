@@ -54,6 +54,12 @@ The working directory is not a detail — it's what turns "a coding workspace" i
 
 JSON on disk, a `Workspace` class in memory — `workspace.py`. Never executable `.js` — see constraint 2.
 
+**A definition can be deleted, and deleting it is not closing anything.** `oma-space delete <index>` empties the slot; the workspace keeps every window open on it. The two are worth separating precisely because the plugin's whole subject is the description of a workspace rather than the workspace itself — throwing away a saved arrangement you no longer want should never be a reason to lose the windows you are using. Interface: `docs/delete.md`.
+
+A slot is emptied, never removed: the store is the ten workspaces, so a deleted definition leaves workspace N with no configuration rather than leaving a gap where N used to be. Deleting twice is the same as deleting once.
+
+In the panel it is asked for twice — the button becomes `Delete?` and the status line says what goes and what stays. The same shape as replacing an existing definition, and for the same reason: a destructive write is a thing the user says, not a thing a dialog asks.
+
 ### F3 · Capture — save the current workspace
 
 One action: **save what I have right now as a definition.**
@@ -252,6 +258,7 @@ oma-space/
 │                            capture <index>   the workspace -> a definition, on stdout
 │                            save <name>       a definition -> ~/.config/oma-space/workspaces
 │                            edit <index>      a definition's name and icon, in place
+│                            delete <index>    empty a workspace's slot
 │                            live              every workspace and its windows, on stdout
 │                            restore <index>   a workspace -> whatever is saved for it
 │                            open [index]      the same, defaulting to where you are
@@ -263,6 +270,7 @@ oma-space/
                              capture.py      F3 — reads; returns a Workspace
                              save.py         F3 — writes; the step capture leaves to the user
                              edit.py         F6 — labels only; the write that is not a capture
+                             delete.py       F2 — empties a slot; the workspace is untouched
                              live.py         F1 — what is open now
                              list.py         F1 — what is saved
                              restore.py      F4
@@ -295,6 +303,10 @@ It also lands Oma-space in `service`, one of the least-used plugin kinds in the 
 **No `panel` kind.** A dedicated side surface was declared before it was written, and declaring it cost more than the stub was worth: the shell treats any plugin carrying `panel`, `overlay` or `menu` as owned by the panel loader, which takes the bar widget out of `summon`'s reach. Dropping the kind is what makes `omarchy-shell shell toggle <id>` open the real panel. The all-ten view lives in the tab's own panel (F6); a separate side surface is a v2 question.
 
 ---
+
+## Licensing
+
+GPL-3.0-or-later. Copyleft rather than permissive: this is a plugin people are meant to read, copy and adapt — the architecture is half the point of it — and the licence that keeps adaptations readable is the one that matches. Omarchy itself is MIT, which is not a conflict: oma-space is distributed on its own and loaded by the shell, not merged into it.
 
 ## Success criteria
 

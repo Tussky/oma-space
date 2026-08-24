@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Put the tabs on the bar and take Omarchy's strip off it (prd.md F6).
 
 Omarchy has no install hook — `omarchy plugin add` clones a directory and stops
